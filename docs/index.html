@@ -36,9 +36,11 @@ const L=d.log||[],n=L.length,N=d.next||{surah:1,ayah:1};
 const pct=((sum(AY.slice(0,N.surah-1))+N.ayah-1)/sum(AY)*100).toFixed(1);
 $("c1").textContent=n;$("c2").textContent=pct+"%";$("bar").style.width=pct+"%";
 $("pos").textContent=`الموضع القادم: سورة رقم ${N.surah} آية ${N.ayah}`;
-const now=new Date();let nx=null;
-for(const dd of[0,1])for(const h of[6,12,18]){const t=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+dd,h));if(t>now&&!nx)nx=t}
-$("c3").textContent=nx.toLocaleString("ar-EG",{weekday:"short",hour:"numeric",minute:"2-digit"});
+try{const T=(await(await fetch("https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5")).json()).data.timings;
+const off={Sunrise:0,Dhuhr:0,Asr:0,Isha:30},cs=[];
+for(const dd of[0,1])for(const k in off){const[hh,mm]=T[k].slice(0,5).split(":");const t=new Date();t.setDate(t.getDate()+dd);t.setHours(+hh,+mm+off[k],0,0);cs.push(t)}
+const nx=cs.filter(t=>t>new Date()).sort((a,b)=>a-b)[0];
+$("c3").textContent=nx.toLocaleString("ar-EG",{weekday:"short",hour:"numeric",minute:"2-digit"})}catch(e){$("c3").textContent="-"}
 $("c4").textContent=n?new Date(L[n-1].t).toLocaleString("ar-EG",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"-";
 $("tb").innerHTML=L.slice(-15).reverse().map(x=>`<tr><td>${new Date(x.t).toLocaleDateString("ar-EG",{day:"numeric",month:"short"})}</td><td>${esc(x.title)}</td><td>${x.yt?`<a href="https://youtu.be/${esc(x.yt)}">▶</a>`:""}</td></tr>`).join("")||"<tr><td class=m>لسه مفيش فيديوهات مسجلة</td></tr>";
 const c={};L.forEach(x=>c[x.reciter]=(c[x.reciter]||0)+1);const mx=Math.max(1,...Object.values(c));
