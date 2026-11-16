@@ -5,11 +5,7 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 
 RECITER = "Alafasy_128kbps"
-RECITERS = {
-    "Alafasy_128kbps": "مشاري العفاسي",
-    "Abdul_Basit_Murattal_192kbps": "عبد الباسط عبد الصمد",
-    "Husary_128kbps": "محمود خليل الحصري",
-}
+from reciters import RECITERS
 W, H = 1080, 1920
 MAX_SECONDS = 45
 from PIL import features

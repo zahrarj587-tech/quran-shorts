@@ -5,7 +5,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 p = json.load(open("progress.json"))
-video, title, nxt = make_chunk(p["surah"], p["ayah"])
+from reciters import pick
+n = p.get("n", 0)
+video, title, nxt = make_chunk(p["surah"], p["ayah"], pick(n))
+nxt["n"] = n + 1
 print("Made:", title)
 
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
