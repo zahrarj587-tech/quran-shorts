@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quran Shorts Admin</title>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #10b981; --danger: #ef4444; --gold: #fbbf24; }
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #10b981; --danger: #ef4444; --gold: #fbbf24; --blue: #3b82f6; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
@@ -17,16 +17,19 @@
         .hidden { display: none !important; }
         input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
         
-        /* تصميم الكروت الجديد */
         .list-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         .list-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
         .item-info { display: flex; flex-direction: column; overflow: hidden; margin-left: 10px; }
         .item-name { font-weight: bold; font-size: 16px; color: var(--text); margin-bottom: 4px; }
         .item-key { font-size: 11px; color: #94a3b8; direction: ltr; text-align: right; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-box { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--gold); }
-        .stat-val { font-size: 20px; font-weight: bold; margin-top: 10px; color: var(--accent); }
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+        @media(min-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .stat-box { background: var(--card); padding: 15px; border-radius: 8px; border-right: 4px solid var(--gold); display: flex; flex-direction: column; justify-content: center; }
+        .stat-title { font-size: 14px; color: #94a3b8; margin-bottom: 5px; }
+        .stat-val { font-size: 18px; font-weight: bold; color: var(--text); }
+        .stat-sub { font-size: 13px; color: var(--accent); margin-top: 5px; }
         
         .add-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155; }
         @media(min-width: 600px) { .add-row { flex-direction: row; align-items: center; } .add-row input { margin-bottom: 0; } }
@@ -39,10 +42,23 @@
         <button id="loginBtn" class="btn" onclick="login()">دخول الأدمن</button>
     </div>
 
-    <div class="stats-grid" id="stats">
-        <div class="stat-box"><div>التقدم الحالي</div><div class="stat-val" id="progress">...</div></div>
-        <div class="stat-box"><div>آخر فيديو</div><div class="stat-val" id="lastVideo">...</div></div>
-        <div class="stat-box"><div>آخر ميعاد</div><div class="stat-val" id="nextPost">...</div></div>
+    <div class="stats-grid">
+        <div class="stat-box" style="border-color: var(--accent);">
+            <div class="stat-title">التقدم الحالي</div>
+            <div class="stat-val" id="progress">جاري التحميل...</div>
+        </div>
+        
+        <div class="stat-box" style="border-color: var(--blue);">
+            <div class="stat-title">آخر فيديو تم نشره</div>
+            <div class="stat-val" id="lastPostTime">جاري التحميل...</div>
+            <div class="stat-sub" id="lastPostReciter"></div>
+        </div>
+
+        <div class="stat-box" style="border-color: var(--gold);">
+            <div class="stat-title">النشر القادم</div>
+            <div class="stat-val" id="nextPostTime">جاري الحساب...</div>
+            <div class="stat-sub" id="nextPostReciter"></div>
+        </div>
     </div>
 
     <div id="adminPanel" class="hidden">
@@ -73,25 +89,85 @@
 <script>
     const REPO = "zahrarj587-tech/quran-shorts";
     let PAT = localStorage.getItem("gh_pat") || "";
+    let recitersData = {};
+    let slotsData = {};
     
-    async function loadStats() {
+    async function loadData() {
         try {
-            const [progRes, statsRes] = await Promise.all([
+            // Fetch JSON files directly from GitHub raw
+            const [progRes, statsRes, recitersRes, slotsRes] = await Promise.all([
                 fetch(`https://raw.githubusercontent.com/${REPO}/main/progress.json`),
-                fetch(`https://raw.githubusercontent.com/${REPO}/main/stats.json`)
+                fetch(`https://raw.githubusercontent.com/${REPO}/main/stats.json`),
+                fetch(`https://raw.githubusercontent.com/${REPO}/main/reciters.json`),
+                fetch(`https://raw.githubusercontent.com/${REPO}/main/slots.json`)
             ]);
+            
             const prog = await progRes.json();
             const stats = await statsRes.json();
+            recitersData = await recitersRes.json();
+            slotsData = await slotsRes.json();
+
+            // 1. Progress
             document.getElementById("progress").innerText = `سورة ${prog.surah} - آية ${prog.ayah}`;
-            document.getElementById("lastVideo").innerText = stats.next ? `آية ${stats.next.ayah}` : "لا يوجد";
             
-            let lastSlot = "لا يوجد";
-            if (stats.slots && stats.slots.length > 0) {
-                let parts = stats.slots[stats.slots.length - 1].split('-');
-                lastSlot = parts.length > 3 ? parts[3] : parts[parts.length-1];
+            // 2. Next Reciter
+            const reciterKeys = Object.keys(recitersData);
+            const nextReciterKey = reciterKeys[prog.n % reciterKeys.length];
+            const nextReciterName = recitersData[nextReciterKey] || nextReciterKey;
+            document.getElementById("nextPostReciter").innerText = `بصوت: ${nextReciterName}`;
+
+            // 3. Last Post Info
+            if (stats.log && stats.log.length > 0) {
+                const lastLog = stats.log[stats.log.length - 1];
+                const lastDate = new Date(lastLog.time || Date.now());
+                const timeStr = lastDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById("lastPostTime").innerText = `${lastLog.slot || 'سابقاً'}`;
+                document.getElementById("lastPostReciter").innerText = `الساعة: ${timeStr} | بصوت: ${lastLog.reciter_name || 'غير معروف'}`;
+            } else {
+                document.getElementById("lastPostTime").innerText = "لا يوجد";
             }
-            document.getElementById("nextPost").innerText = lastSlot;
+
+            // 4. Next Post Calculation
+            calculateNextPost();
+
         } catch(e) { console.log(e); }
+    }
+
+    async function calculateNextPost() {
+        try {
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5`);
+            const data = await res.json();
+            const timings = data.data.timings;
+
+            let upcomingSlots = [];
+            for (let [key, offset] of Object.entries(slotsData)) {
+                if (!timings[key]) continue;
+                let [h, m] = timings[key].split(':').map(Number);
+                let slotTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+                slotTime.setMinutes(slotTime.getMinutes() + offset);
+                
+                if (slotTime > now) {
+                    upcomingSlots.push({ name: key, time: slotTime });
+                }
+            }
+            
+            upcomingSlots.sort((a, b) => a.time - b.time);
+
+            if (upcomingSlots.length > 0) {
+                const next = upcomingSlots[0];
+                const timeStr = next.time.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById("nextPostTime").innerText = `الساعة: ${timeStr}`;
+                document.getElementById("nextPostReciter").innerHTML += `<br><span style="color:#94a3b8; font-size:11px;">(ميعاد: ${next.name})</span>`;
+            } else {
+                // If no more today, calculate tomorrow's Sunrise
+                document.getElementById("nextPostTime").innerText = "غداً (شروق)";
+            }
+        } catch(e) { 
+            document.getElementById("nextPostTime").innerText = "تعذر الحساب";
+            console.log(e); 
+        }
     }
 
     function login() {
@@ -155,6 +231,7 @@
             document.getElementById("newReciterName").value = "";
             document.getElementById("newReciterKey").value = "";
             loadReciters();
+            loadData(); // Refresh stats
         } catch(e) { alert("حدث خطأ أثناء الإضافة"); }
     }
 
@@ -165,6 +242,7 @@
             delete data[key];
             await updateFile("reciters.json", data, sha, `Delete reciter: ${key}`);
             loadReciters();
+            loadData();
         } catch(e) { alert("حدث خطأ أثناء الحذف"); }
     }
 
@@ -196,6 +274,7 @@
             data[key] = newOffset;
             await updateFile("slots.json", data, sha, `Update slot ${key} to ${newOffset}`);
             alert("تم الحفظ!");
+            loadData();
         } catch(e) { alert("حدث خطأ"); }
     }
 
@@ -212,7 +291,7 @@
         } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ ❌"; }
     }
 
-    loadStats();
+    loadData();
     if (PAT) showAdmin();
 </script>
 </body>
