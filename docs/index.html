@@ -1,51 +1,9 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة التحكم</title>
-<style>
-:root{--bg:#0b1511;--c:#13241c;--t:#eaf3ee;--m:#8fa89a;--g:#d4af37}
-*{box-sizing:border-box}body{margin:auto;background:var(--bg);color:var(--t);font-family:system-ui,sans-serif;padding:16px;max-width:760px}
-.card{background:var(--c);border-radius:14px;padding:14px;margin:10px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.n{font-size:24px;font-weight:700;color:var(--g)}.m{color:var(--m);font-size:13px}
-.bar{height:9px;background:var(--bg);border-radius:9px;overflow:hidden;margin:4px 0 8px}.bar i{display:block;height:100%;background:var(--g)}
-table{width:100%;border-collapse:collapse;font-size:13px}td{padding:8px 4px;border-bottom:1px solid #1d3328}
-a{color:var(--g)}input,button{font-size:18px;padding:12px;border-radius:10px;border:0;width:100%;margin-top:8px}button{background:var(--g);color:#000}#app{display:none}
-</style></head><body>
-<div id="login" class="card"><h2>تسجيل الدخول</h2><input id="pw" type="password" autocapitalize="off" autocorrect="off" placeholder="كلمة السر"><button onclick="go()">دخول</button><p id="err" class="m"></p></div>
-<div id="app">
-<h2>🕌 لوحة تحكم الشورتس</h2>
-<div class="grid"><div class="card"><div class="n" id="c1">-</div><div class="m">فيديو منشور</div></div>
-<div class="card"><div class="n" id="c2">-</div><div class="m">تقدم القرآن</div></div>
-<div class="card"><div class="n" id="c3" style="font-size:16px">-</div><div class="m">النشر القادم</div></div>
-<div class="card"><div class="n" id="c4" style="font-size:16px">-</div><div class="m">آخر رفع</div></div></div>
-<div class="card"><div class="bar"><i id="bar"></i></div><div class="m" id="pos"></div></div>
-<div class="card"><div class="m">آخر التشغيلات</div><div id="runs" style="font-size:22px">...</div></div>
-<div class="card"><div class="m" style="margin-bottom:6px">آخر الفيديوهات</div><table id="tb"></table></div>
-<div class="card"><div class="m" style="margin-bottom:6px">توزيع القراء</div><div id="rc"></div></div>
-<div class="card"><a href="https://github.com/zahrarj587-tech/quran-shorts/actions/workflows/post.yml">▶ تشغيل يدوي</a> · <a href="https://studio.youtube.com">YouTube Studio</a> · <a href="#" onclick="localStorage.clear();location.reload()">خروج</a></div>
-</div>
-<script>
-const H="c90e2fc2cd40f59b3c8e33ae93d29803e1eb88f21cd5bebe7a020f0fb54503b3",R="zahrarj587-tech/quran-shorts",AY=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
-const $=i=>document.getElementById(i),sum=a=>a.reduce((x,y)=>x+y,0);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
-async function go(){if(await sha($("pw").value.trim())===H){localStorage.k=H;show()}else $("err").textContent="كلمة السر غلط"}
-function show(){$("login").style.display="none";$("app").style.display="block";load()}
-if(localStorage.k===H)show();
-async function load(){
-let d={log:[],next:{surah:1,ayah:1}};
-try{d=await(await fetch(`https://raw.githubusercontent.com/${R}/main/stats.json?`+Date.now())).json()}catch(e){}
-const L=d.log||[],n=L.length,N=d.next||{surah:1,ayah:1};
-const pct=((sum(AY.slice(0,N.surah-1))+N.ayah-1)/sum(AY)*100).toFixed(1);
-$("c1").textContent=n;$("c2").textContent=pct+"%";$("bar").style.width=pct+"%";
-$("pos").textContent=`الموضع القادم: سورة رقم ${N.surah} آية ${N.ayah}`;
-try{const T=(await(await fetch("https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5")).json()).data.timings;
-const off={Sunrise:0,Dhuhr:0,Asr:0,Isha:30},cs=[];
-for(const dd of[0,1])for(const k in off){const[hh,mm]=T[k].slice(0,5).split(":");const t=new Date();t.setDate(t.getDate()+dd);t.setHours(+hh,+mm+off[k],0,0);cs.push(t)}
-const nx=cs.filter(t=>t>new Date()).sort((a,b)=>a-b)[0];
-$("c3").textContent=nx.toLocaleString("ar-EG",{weekday:"short",hour:"numeric",minute:"2-digit"})}catch(e){$("c3").textContent="-"}
-$("c4").textContent=n?new Date(L[n-1].t).toLocaleString("ar-EG",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"-";
-$("tb").innerHTML=L.slice(-15).reverse().map(x=>`<tr><td>${new Date(x.t).toLocaleDateString("ar-EG",{day:"numeric",month:"short"})}</td><td>${esc(x.title)}</td><td>${x.yt?`<a href="https://youtu.be/${esc(x.yt)}">▶</a>`:""}</td></tr>`).join("")||"<tr><td class=m>لسه مفيش فيديوهات مسجلة</td></tr>";
-const c={};L.forEach(x=>c[x.reciter]=(c[x.reciter]||0)+1);const mx=Math.max(1,...Object.values(c));
-$("rc").innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class=m>${esc(k)} (${v})</div><div class=bar><i style="width:${v/mx*100}%"></i></div>`).join("");
-try{const r=await(await fetch(`https://api.github.com/repos/${R}/actions/runs?per_page=15`)).json();
-$("runs").innerHTML=r.workflow_runs.filter(x=>x.name==="post").slice(0,6).map(x=>`<a href="${x.html_url}">${x.conclusion==="success"?"✅":x.conclusion?"❌":"🟡"}</a>`).join(" ")||"-"}catch(e){}
-}
-</script></body></html>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><title>Quran Shorts</title></head>
+<body>
+<h1>Quran Shorts</h1>
+<p>تطبيق شخصي لتوليد ونشر فيديوهات قرآنية قصيرة تلقائياً على قنوات التواصل الاجتماعي.</p>
+<p><a href="privacy.html">سياسة الخصوصية</a></p>
+</body>
+</html>
