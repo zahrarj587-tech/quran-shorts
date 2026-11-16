@@ -3,5 +3,7 @@ google-api-python-client
 google-auth-oauthlib
 google-auth-httplib2
 Pillow
+arabic_reshaper
+python-bidi
 tiktok-uploader
 playwright
