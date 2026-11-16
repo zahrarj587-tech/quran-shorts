@@ -12,63 +12,60 @@
         .btn { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn:hover { opacity: 0.8; }
         .btn-danger { background: var(--danger); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
         .card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .hidden { display: none !important; }
         input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        .table-container { overflow-x: auto; width: 100%; }
-        table { width: 100%; min-width: 400px; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: right; border-bottom: 1px solid #334155; white-space: nowrap; }
-        th { background: #0f172a; color: var(--gold); }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        
+        /* تصميم الكروت الجديد */
+        .list-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+        .item-info { display: flex; flex-direction: column; overflow: hidden; margin-left: 10px; }
+        .item-name { font-weight: bold; font-size: 16px; color: var(--text); margin-bottom: 4px; }
+        .item-key { font-size: 11px; color: #94a3b8; direction: ltr; text-align: right; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-box { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--gold); }
-        .stat-val { font-size: 24px; font-weight: bold; margin-top: 10px; color: var(--accent); }
-        .add-row { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        @media(min-width: 600px) { .add-row { flex-direction: row; } .add-row input { margin-bottom: 0; } }
+        .stat-val { font-size: 20px; font-weight: bold; margin-top: 10px; color: var(--accent); }
+        
+        .add-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155; }
+        @media(min-width: 600px) { .add-row { flex-direction: row; align-items: center; } .add-row input { margin-bottom: 0; } }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h2>🕌 لوحة تحكم القرآن</h2>
+        <h2>🕌 لوحة التحكم</h2>
         <button id="loginBtn" class="btn" onclick="login()">دخول الأدمن</button>
     </div>
 
     <div class="stats-grid" id="stats">
         <div class="stat-box"><div>التقدم الحالي</div><div class="stat-val" id="progress">...</div></div>
         <div class="stat-box"><div>آخر فيديو</div><div class="stat-val" id="lastVideo">...</div></div>
-        <div class="stat-box"><div>آخر ميعاد تم</div><div class="stat-val" id="nextPost">...</div></div>
+        <div class="stat-box"><div>آخر ميعاد</div><div class="stat-val" id="nextPost">...</div></div>
     </div>
 
     <div id="adminPanel" class="hidden">
         <div class="card">
             <h3>⚡ إجراءات سريعة</h3>
-            <button class="btn" onclick="triggerWorkflow()">تشغيل البوت الآن (Run Workflow)</button>
-            <span id="workflowStatus" style="margin-right:10px; color:var(--gold);"></span>
+            <button class="btn" onclick="triggerWorkflow()">تشغيل البوت الآن</button>
+            <span id="workflowStatus" style="margin-right:10px; color:var(--gold); font-size:14px;"></span>
         </div>
 
         <div class="card">
             <h3>🎙️ إدارة القراء</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>المفتاح (Key)</th><th>الاسم (Name)</th><th>إجراء</th></tr></thead>
-                    <tbody id="recitersTable"></tbody>
-                </table>
-            </div>
+            <div class="list-container" id="recitersList"></div>
+            
             <div class="add-row">
-                <input type="text" id="newReciterKey" placeholder="المفتاح (مثال: Yasser_Ad-Dussary_128kbps)">
-                <input type="text" id="newReciterName" placeholder="الاسم (مثال: ياسر الدوسري)">
+                <input type="text" id="newReciterName" placeholder="اسم القارئ (بالعربي)">
+                <input type="text" id="newReciterKey" placeholder="المفتاح (إنجليزي بدون مسافات)">
                 <button class="btn" onclick="addReciter()">إضافة</button>
             </div>
         </div>
 
         <div class="card">
             <h3>⏰ إدارة المواعيد (بالدقائق)</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>الميعاد</th><th>الفارق (Offset)</th><th>إجراء</th></tr></thead>
-                    <tbody id="slotsTable"></tbody>
-                </table>
-            </div>
+            <div class="list-container" id="slotsList"></div>
         </div>
     </div>
 </div>
@@ -99,13 +96,13 @@
 
     function login() {
         if (PAT) { showAdmin(); return; }
-        let token = prompt("أدخل GitHub Personal Access Token (يبدأ بـ ghp_):");
+        let token = prompt("أدخل GitHub Token:");
         if (token) { PAT = token; localStorage.setItem("gh_pat", PAT); showAdmin(); }
     }
 
     function showAdmin() {
         document.getElementById("adminPanel").classList.remove("hidden");
-        document.getElementById("loginBtn").innerText = "تسجيل خروج";
+        document.getElementById("loginBtn").innerText = "خروج";
         document.getElementById("loginBtn").onclick = () => { localStorage.removeItem("gh_pat"); location.reload(); };
         loadReciters();
         loadSlots();
@@ -134,28 +131,35 @@
             const { data, sha } = await getFile("reciters.json");
             let html = "";
             for (let [key, name] of Object.entries(data)) {
-                html += `<tr><td dir="ltr">${key}</td><td>${name}</td><td><button class="btn btn-danger" onclick="deleteReciter('${key}')">حذف</button></td></tr>`;
+                html += `
+                <div class="list-item">
+                    <div class="item-info">
+                        <span class="item-name">${name}</span>
+                        <span class="item-key">${key}</span>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteReciter('${key}')">حذف</button>
+                </div>`;
             }
-            document.getElementById("recitersTable").innerHTML = html;
+            document.getElementById("recitersList").innerHTML = html;
         } catch(e) { alert("خطأ في تحميل القراء. تأكد من التوكن."); }
     }
 
     async function addReciter() {
-        const key = document.getElementById("newReciterKey").value.trim();
         const name = document.getElementById("newReciterName").value.trim();
-        if (!key || !name) return alert("أدخل المفتاح والاسم");
+        const key = document.getElementById("newReciterKey").value.trim();
+        if (!key || !name) return alert("أدخل الاسم والمفتاح");
         try {
             const { data, sha } = await getFile("reciters.json");
             data[key] = name;
             await updateFile("reciters.json", data, sha, `Add reciter: ${name}`);
-            document.getElementById("newReciterKey").value = "";
             document.getElementById("newReciterName").value = "";
+            document.getElementById("newReciterKey").value = "";
             loadReciters();
         } catch(e) { alert("حدث خطأ أثناء الإضافة"); }
     }
 
     async function deleteReciter(key) {
-        if (!confirm("هل أنت متأكد من حذف هذا القارئ؟")) return;
+        if (!confirm("هل أنت متأكد من الحذف؟")) return;
         try {
             const { data, sha } = await getFile("reciters.json");
             delete data[key];
@@ -169,9 +173,18 @@
             const { data, sha } = await getFile("slots.json");
             let html = "";
             for (let [key, offset] of Object.entries(data)) {
-                html += `<tr><td>${key}</td><td><input type="number" id="off_${key}" value="${offset}" style="width:80px; margin:0;"></td><td><button class="btn" onclick="saveSlot('${key}')">حفظ</button></td></tr>`;
+                html += `
+                <div class="list-item">
+                    <div class="item-info">
+                        <span class="item-name" style="color:var(--gold);">${key}</span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="number" id="off_${key}" value="${offset}" style="width:70px; margin:0; padding:5px;">
+                        <button class="btn btn-sm" onclick="saveSlot('${key}')">حفظ</button>
+                    </div>
+                </div>`;
             }
-            document.getElementById("slotsTable").innerHTML = html;
+            document.getElementById("slotsList").innerHTML = html;
         } catch(e) { console.log(e); }
     }
 
@@ -181,8 +194,8 @@
         try {
             const { data, sha } = await getFile("slots.json");
             data[key] = newOffset;
-            await updateFile("slots.json", data, sha, `Update slot ${key} offset to ${newOffset}`);
-            alert("تم الحفظ بنجاح!");
+            await updateFile("slots.json", data, sha, `Update slot ${key} to ${newOffset}`);
+            alert("تم الحفظ!");
         } catch(e) { alert("حدث خطأ"); }
     }
 
@@ -194,9 +207,9 @@
                 headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' },
                 body: JSON.stringify({ ref: 'main' })
             });
-            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل بنجاح ✅";
+            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل ✅";
             else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌";
-        } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ في الاتصال ❌"; }
+        } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ ❌"; }
     }
 
     loadStats();
