@@ -1,9 +1,202 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><title>Quran Shorts</title></head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran Shorts Admin</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #10b981; --danger: #ef4444; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn:hover { opacity: 0.8; }
+        .btn-danger { background: var(--danger); }
+        .card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .hidden { display: none !important; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: right; border-bottom: 1px solid #334155; }
+        th { background: #0f172a; color: var(--gold); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-box { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--gold); }
+        .stat-val { font-size: 24px; font-weight: bold; margin-top: 10px; color: var(--accent); }
+        .tab-btn { background: #334155; margin-right: 5px; }
+        .tab-btn.active { background: var(--accent); }
+    </style>
+</head>
 <body>
-<h1>Quran Shorts</h1>
-<p>تطبيق شخصي لتوليد ونشر فيديوهات قرآنية قصيرة تلقائياً على قنوات التواصل الاجتماعي.</p>
-<p><a href="privacy.html">سياسة الخصوصية</a></p>
+<div class="container">
+    <div class="header">
+        <h2>🕌 لوحة تحكم القرآن</h2>
+        <button id="loginBtn" class="btn" onclick="login()">دخول الأدمن</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats">
+        <div class="stat-box"><div>التقدم الحالي</div><div class="stat-val" id="progress">...</div></div>
+        <div class="stat-box"><div>آخر فيديو</div><div class="stat-val" id="lastVideo">...</div></div>
+        <div class="stat-box"><div>النشر القادم</div><div class="stat-val" id="nextPost">...</div></div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+        <div class="card">
+            <h3>⚡ إجراءات سريعة</h3>
+            <button class="btn" onclick="triggerWorkflow()">تشغيل البوت الآن (Run Workflow)</button>
+            <span id="workflowStatus" style="margin-right:10px; color:var(--gold);"></span>
+        </div>
+
+        <div class="card">
+            <h3>🎙️ إدارة القراء</h3>
+            <table>
+                <thead><tr><th>المفتاح (Key)</th><th>الاسم (Name)</th><th>إجراء</th></tr></thead>
+                <tbody id="recitersTable"></tbody>
+            </table>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <input type="text" id="newReciterKey" placeholder="مثال: Yasser_Ad-Dussary_128kbps">
+                <input type="text" id="newReciterName" placeholder="مثال: ياسر الدوسري">
+                <button class="btn" onclick="addReciter()">إضافة</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⏰ إدارة المواعيد (بالدقائق)</h3>
+            <table>
+                <thead><tr><th>الميعاد</th><th>الفارق (Offset)</th><th>إجراء</th></tr></thead>
+                <tbody id="slotsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const REPO = "zahrarj587-tech/quran-shorts";
+    let PAT = localStorage.getItem("gh_pat") || "";
+    let recitersSha = "", slotsSha = "";
+
+    // Load Stats on start
+    async function loadStats() {
+        try {
+            const [progRes, statsRes] = await Promise.all([
+                fetch(`https://raw.githubusercontent.com/${REPO}/main/progress.json`),
+                fetch(`https://raw.githubusercontent.com/${REPO}/main/stats.json`)
+            ]);
+            const prog = await progRes.json();
+            const stats = await statsRes.json();
+            document.getElementById("progress").innerText = `سورة ${prog.surah} - آية ${prog.ayah}`;
+            document.getElementById("lastVideo").innerText = stats.next ? `آية ${stats.next.ayah}` : "لا يوجد";
+            document.getElementById("nextPost").innerText = stats.slots && stats.slots.length > 0 ? stats.slots[stats.slots.length-1].split('-')[1] : "غير متاح";
+        } catch(e) { console.log(e); }
+    }
+
+    function login() {
+        if (PAT) { showAdmin(); return; }
+        let token = prompt("أدخل GitHub Personal Access Token (يبدأ بـ ghp_):");
+        if (token) { PAT = token; localStorage.setItem("gh_pat", PAT); showAdmin(); }
+    }
+
+    function showAdmin() {
+        document.getElementById("adminPanel").classList.remove("hidden");
+        document.getElementById("loginBtn").innerText = "تسجيل خروج";
+        document.getElementById("loginBtn").onclick = () => { localStorage.removeItem("gh_pat"); location.reload(); };
+        loadReciters();
+        loadSlots();
+    }
+
+    // API Helpers
+    async function getFile(path) {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, { headers: { 'Authorization': `Bearer ${PAT}` } });
+        const data = await res.json();
+        if (!data.content) throw new Error("Auth failed");
+        const content = decodeURIComponent(atob(data.content).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return { data: JSON.parse(content), sha: data.sha };
+    }
+
+    async function updateFile(path, obj, sha, msg) {
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(obj, null, 2))));
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${PAT}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, content: content, sha: sha })
+        });
+        if (!res.ok) throw new Error("Update failed");
+    }
+
+    async function loadReciters() {
+        try {
+            const { data, sha } = await getFile("reciters.json");
+            recitersSha = sha;
+            let html = "";
+            for (let [key, name] of Object.entries(data)) {
+                html += `<tr><td dir="ltr">${key}</td><td>${name}</td><td><button class="btn btn-danger" onclick="deleteReciter('${key}')">حذف</button></td></tr>`;
+            }
+            document.getElementById("recitersTable").innerHTML = html;
+        } catch(e) { alert("خطأ في تحميل القراء. تأكد من التوكن."); }
+    }
+
+    async function addReciter() {
+        const key = document.getElementById("newReciterKey").value.trim();
+        const name = document.getElementById("newReciterName").value.trim();
+        if (!key || !name) return alert("أدخل المفتاح والاسم");
+        try {
+            const { data, sha } = await getFile("reciters.json");
+            data[key] = name;
+            await updateFile("reciters.json", data, sha, `Add reciter: ${name}`);
+            document.getElementById("newReciterKey").value = "";
+            document.getElementById("newReciterName").value = "";
+            loadReciters();
+        } catch(e) { alert("حدث خطأ أثناء الإضافة"); }
+    }
+
+    async function deleteReciter(key) {
+        if (!confirm("هل أنت متأكد من حذف هذا القارئ؟")) return;
+        try {
+            const { data, sha } = await getFile("reciters.json");
+            delete data[key];
+            await updateFile("reciters.json", data, sha, `Delete reciter: ${key}`);
+            loadReciters();
+        } catch(e) { alert("حدث خطأ أثناء الحذف"); }
+    }
+
+    async function loadSlots() {
+        try {
+            const { data, sha } = await getFile("slots.json");
+            slotsSha = sha;
+            let html = "";
+            for (let [key, offset] of Object.entries(data)) {
+                html += `<tr><td>${key}</td><td><input type="number" id="off_${key}" value="${offset}" style="width:80px;"></td><td><button class="btn" onclick="saveSlot('${key}')">حفظ</button></td></tr>`;
+            }
+            document.getElementById("slotsTable").innerHTML = html;
+        } catch(e) { console.log(e); }
+    }
+
+    async function saveSlot(key) {
+        const newOffset = parseInt(document.getElementById(`off_${key}`).value);
+        if (isNaN(newOffset)) return alert("أدخل رقم صحيح");
+        try {
+            const { data, sha } = await getFile("slots.json");
+            data[key] = newOffset;
+            await updateFile("slots.json", data, sha, `Update slot ${key} offset to ${newOffset}`);
+            alert("تم الحفظ بنجاح!");
+        } catch(e) { alert("حدث خطأ"); }
+    }
+
+    async function triggerWorkflow() {
+        document.getElementById("workflowStatus").innerText = "جاري التشغيل...";
+        try {
+            const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/post.yml/dispatches`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify({ ref: 'main' })
+            });
+            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل بنجاح ✅";
+            else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌";
+        } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ في الاتصال ❌"; }
+    }
+
+    loadStats();
+    if (PAT) showAdmin();
+</script>
 </body>
 </html>
