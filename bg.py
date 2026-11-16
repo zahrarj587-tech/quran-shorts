@@ -7,67 +7,69 @@ def make_bg(seed, out_dir):
     base_path = os.path.join(out_dir, "base.png")
     dust_path = os.path.join(out_dir, "dust.png")
     
-    api_key = os.environ.get("PIXABAY_API_KEY")
+    img = None
+    rng = random.Random(seed)
 
     # 1. محاولة جلب صورة من Pixabay
+    api_key = os.environ.get("PIXABAY_API_KEY")
     if api_key:
         try:
-            keywords = ["nature", "clouds", "sky", "stars", "islamic", "mosque", "water", "forest", "mountain", "light", "sunset", "night"]
-            rng = random.Random(seed)
+            keywords = ["nature", "clouds", "sky", "stars", "islamic", "mosque", "water", "forest", "mountain", "light"]
             keyword = rng.choice(keywords)
             url = f"https://pixabay.com/api/?key={api_key}&q={keyword}&orientation=vertical&image_type=photo&per_page=50"
             
-            res = requests.get(url, timeout=15).json()
+            res = requests.get(url, timeout=10).json()
             if res.get("hits"):
                 img_url = rng.choice(res["hits"])["largeImageURL"]
-                img_data = requests.get(img_url, timeout=20).content
-                
+                img_data = requests.get(img_url, timeout=15).content
                 with open(base_path, "wb") as f:
                     f.write(img_data)
-                    
-                # معالجة الصورة: قصها 9:16 وتعتيمها
                 img = Image.open(base_path).convert("RGB")
-                w, h = img.size
-                target_ratio = 1080 / 1920
-                if w / h > target_ratio:
-                    new_w = int(h * target_ratio)
-                    left = (w - new_w) // 2
-                    img = img.crop((left, 0, left + new_w, h))
-                else:
-                    new_h = int(w / target_ratio)
-                    top = (h - new_h) // 2
-                    img = img.crop((0, top, w, top + new_h))
-                
-                img = img.resize((1080, 1920), Image.LANCZOS)
-                img = ImageEnhance.Brightness(img).enhance(0.35) # تعتيم عشان النص يبان
-                img.save(base_path)
-                
-                # صورة شفافة للغبار عشان الكود ميدربش
-                dust = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
-                dust.save(dust_path)
-                return base_path, dust_path
         except Exception as e:
-            print(f"Pixabay image failed: {e}. Falling back.")
+            print(f"Pixabay failed: {e}. Trying fallback...")
 
-    # 2. الخطة البديلة: خلفية لونية متدرجة (لو مفيش نت أو المفتاح ضاع)
-    themes = [
-        ((10, 50, 30), (20, 80, 50)),
-        ((10, 15, 40), (25, 30, 70)),
-        ((60, 40, 20), (100, 70, 30)),
-        ((20, 20, 20), (50, 50, 50))
-    ]
-    rng = random.Random(seed)
-    top_c, bot_c = rng.choice(themes)
+    # 2. الخطة البديلة: جلب صورة طبيعية من Picsum
+    if img is None:
+        try:
+            url = f"https://picsum.photos/1080/1920?random={seed}"
+            img_data = requests.get(url, timeout=10).content
+            with open(base_path, "wb") as f:
+                f.write(img_data)
+            img = Image.open(base_path).convert("RGB")
+            print("Used Picsum fallback image.")
+        except Exception as e:
+            print(f"Picsum failed: {e}. Generating pattern...")
+
+    # 3. الخطة البديلة النهائية: رسم زخرفة إسلامية هندسية
+    if img is None:
+        img = Image.new("RGB", (1080, 1920), (15, 23, 42)) # خلفية كحلي غامق
+        draw = ImageDraw.Draw(img)
+        color = rng.choice([(16, 185, 129), (59, 130, 246), (245, 158, 11), (212, 175, 55)]) # ألوان زمردي، أزرق، ذهبي
+        for x in range(-100, 1080, 120):
+            for y in range(-100, 1920, 120):
+                if (x//120 + y//120) % 2 == 0:
+                    draw.ellipse([x, y, x+120, y+120], outline=color, width=4)
+                else:
+                    draw.rectangle([x, y, x+120, y+120], outline=color, width=2)
+        print("Used generated Islamic pattern fallback.")
+
+    # قص الصورة 9:16 وتعتيمها عشان النص يبان
+    w, h = img.size
+    target_ratio = 1080 / 1920
+    if w / h > target_ratio:
+        new_w = int(h * target_ratio)
+        left = (w - new_w) // 2
+        img = img.crop((left, 0, left + new_w, h))
+    else:
+        new_h = int(w / target_ratio)
+        top = (h - new_h) // 2
+        img = img.crop((0, top, w, top + new_h))
     
-    base = Image.new("RGB", (1080, 1920), top_c)
-    draw = ImageDraw.Draw(base)
-    for y in range(1920):
-        r = int(top_c[0] + (bot_c[0] - top_c[0]) * y / 1920)
-        g = int(top_c[1] + (bot_c[1] - top_c[1]) * y / 1920)
-        b = int(top_c[2] + (bot_c[2] - top_c[2]) * y / 1920)
-        draw.line([(0, y), (1080, y)], fill=(r, g, b))
-        
-    base.save(base_path)
+    img = img.resize((1080, 1920), Image.LANCZOS)
+    img = ImageEnhance.Brightness(img).enhance(0.4) # تعتيم
+    img.save(base_path)
+    
+    # صورة الغبار (شفافة عشان الكود الأصلي ميدربش)
     dust = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     dust.save(dust_path)
     return base_path, dust_path
