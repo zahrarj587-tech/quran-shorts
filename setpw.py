@@ -1,0 +1,10 @@
+import hashlib, re
+p = input("اكتب كلمة سر جديدة (إنجليزي وأرقام): ").strip()
+h = hashlib.sha256(p.encode()).hexdigest()
+s = open("docs/index.html").read()
+s, n = re.subn(r'const H="[^"]*"', 'const H="%s"' % h, s, count=1)
+s = s.replace('sha($("pw").value)', 'sha($("pw").value.trim())')
+s = s.replace('<input id="pw" type="password"', '<input id="pw" type="password" autocapitalize="off" autocorrect="off"')
+open("docs/index.html", "w").write(s)
+print("replaced:", n)
+print("OK" if h in open("docs/index.html").read() else "FAIL")

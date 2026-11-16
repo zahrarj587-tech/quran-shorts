@@ -8,7 +8,7 @@
 table{width:100%;border-collapse:collapse;font-size:13px}td{padding:8px 4px;border-bottom:1px solid #1d3328}
 a{color:var(--g)}input,button{font-size:18px;padding:12px;border-radius:10px;border:0;width:100%;margin-top:8px}button{background:var(--g);color:#000}#app{display:none}
 </style></head><body>
-<div id="login" class="card"><h2>تسجيل الدخول</h2><input id="pw" type="password" placeholder="كلمة السر"><button onclick="go()">دخول</button><p id="err" class="m"></p></div>
+<div id="login" class="card"><h2>تسجيل الدخول</h2><input id="pw" type="password" autocapitalize="off" autocorrect="off" placeholder="كلمة السر"><button onclick="go()">دخول</button><p id="err" class="m"></p></div>
 <div id="app">
 <h2>🕌 لوحة تحكم الشورتس</h2>
 <div class="grid"><div class="card"><div class="n" id="c1">-</div><div class="m">فيديو منشور</div></div>
@@ -22,11 +22,11 @@ a{color:var(--g)}input,button{font-size:18px;padding:12px;border-radius:10px;bor
 <div class="card"><a href="https://github.com/zahrarj587-tech/quran-shorts/actions/workflows/post.yml">▶ تشغيل يدوي</a> · <a href="https://studio.youtube.com">YouTube Studio</a> · <a href="#" onclick="localStorage.clear();location.reload()">خروج</a></div>
 </div>
 <script>
-const H="bc1583dbd69cf369314be86b8579f367cd17e441986f9131c240015829f044cf",R="zahrarj587-tech/quran-shorts",AY=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+const H="c90e2fc2cd40f59b3c8e33ae93d29803e1eb88f21cd5bebe7a020f0fb54503b3",R="zahrarj587-tech/quran-shorts",AY=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
 const $=i=>document.getElementById(i),sum=a=>a.reduce((x,y)=>x+y,0);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
-async function go(){if(await sha($("pw").value)===H){localStorage.k=H;show()}else $("err").textContent="كلمة السر غلط"}
+async function go(){if(await sha($("pw").value.trim())===H){localStorage.k=H;show()}else $("err").textContent="كلمة السر غلط"}
 function show(){$("login").style.display="none";$("app").style.display="block";load()}
 if(localStorage.k===H)show();
 async function load(){
