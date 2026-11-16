@@ -7,7 +7,8 @@ from googleapiclient.http import MediaFileUpload
 p = json.load(open("progress.json"))
 from reciters import pick
 n = p.get("n", 0)
-video, title, nxt = make_chunk(p["surah"], p["ayah"], pick(n))
+rc = pick(n)
+video, title, nxt = make_chunk(p["surah"], p["ayah"], rc)
 nxt["n"] = n + 1
 print("Made:", title)
 
@@ -39,3 +40,14 @@ if pid and tok:
     print("Facebook OK")
 
 json.dump(nxt, open("progress.json", "w"))
+
+import datetime
+from reciters import RECITERS
+try:
+    st = json.load(open("stats.json"))
+except Exception:
+    st = {"log": []}
+st["log"].append({"t": datetime.datetime.utcnow().isoformat() + "Z",
+    "title": title, "reciter": RECITERS.get(rc, rc), "yt": r["id"]})
+st["next"] = {"surah": nxt["surah"], "ayah": nxt["ayah"]}
+json.dump(st, open("stats.json", "w"), ensure_ascii=False)
