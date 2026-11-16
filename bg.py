@@ -1,59 +1,73 @@
 import os
 import random
-import subprocess
-import urllib.request
-import json
-import sys
+import requests
+from PIL import Image, ImageEnhance, ImageDraw
 
-def make_bg(theme, duration, out_path):
-    api_key = os.environ.get("PIXABAY_API_KEY")
+def make_bg(seed, out_dir):
+    base_path = os.path.join(out_dir, "base.png")
+    dust_path = os.path.join(out_dir, "dust.png")
     
+    api_key = os.environ.get("PIXABAY_API_KEY")
+
+    # 1. محاولة جلب صورة من Pixabay
     if api_key:
         try:
-            # كلمات بحث متنوعة عشان تجيب خلفيات طبيعية وإسلامية هادئة
-            keywords = ["nature", "clouds", "sky", "stars", "islamic", "mosque", "water", "forest", "mountain", "light"]
-            keyword = random.choice(keywords)
-            url = f"https://pixabay.com/api/videos/?key={api_key}&q={keyword}&orientation=vertical&video_type=film&per_page=20"
+            keywords = ["nature", "clouds", "sky", "stars", "islamic", "mosque", "water", "forest", "mountain", "light", "sunset", "night"]
+            rng = random.Random(seed)
+            keyword = rng.choice(keywords)
+            url = f"https://pixabay.com/api/?key={api_key}&q={keyword}&orientation=vertical&image_type=photo&per_page=50"
             
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=15) as response:
-                res = json.load(response)
-                
+            res = requests.get(url, timeout=15).json()
             if res.get("hits"):
-                video = random.choice(res["hits"])
-                video_url = video["videos"]["large"]["url"]
+                img_url = rng.choice(res["hits"])["largeImageURL"]
+                img_data = requests.get(img_url, timeout=20).content
                 
-                temp_vid = f"/tmp/bg_temp_{random.randint(1000,9999)}.mp4"
-                urllib.request.urlretrieve(video_url, temp_vid)
+                with open(base_path, "wb") as f:
+                    f.write(img_data)
+                    
+                # معالجة الصورة: قصها 9:16 وتعتيمها
+                img = Image.open(base_path).convert("RGB")
+                w, h = img.size
+                target_ratio = 1080 / 1920
+                if w / h > target_ratio:
+                    new_w = int(h * target_ratio)
+                    left = (w - new_w) // 2
+                    img = img.crop((left, 0, left + new_w, h))
+                else:
+                    new_h = int(w / target_ratio)
+                    top = (h - new_h) // 2
+                    img = img.crop((0, top, w, top + new_h))
                 
-                # قص الفيديو 9:16 وتعتيمه عشان النص يبان
-                cmd = [
-                    "ffmpeg", "-y", "-stream_loop", "-1", "-i", temp_vid, 
-                    "-t", str(duration), 
-                    "-vf", "scale=-1:1920,crop=1080:1920,eq=brightness=-0.2:saturation=1.1",
-                    "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", 
-                    out_path
-                ]
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                if os.path.exists(temp_vid):
-                    os.remove(temp_vid)
-                return out_path
+                img = img.resize((1080, 1920), Image.LANCZOS)
+                img = ImageEnhance.Brightness(img).enhance(0.35) # تعتيم عشان النص يبان
+                img.save(base_path)
+                
+                # صورة شفافة للغبار عشان الكود ميدربش
+                dust = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+                dust.save(dust_path)
+                return base_path, dust_path
         except Exception as e:
-            print(f"Pixabay failed: {e}. Falling back to generated background.", file=sys.stderr)
+            print(f"Pixabay image failed: {e}. Falling back.")
 
-    # الخطة البديلة: لو مفيش نت أو المفتاح ضاع، هيولّد خلفية لون هادئ مع حبيبات (عشان ميقفش)
-    colors = {
-        "emerald": "0x0f5132",
-        "midnight": "0x0b132b",
-        "gold": "0x5c4033",
-        "royal": "0x1e3a8a",
-        "onyx": "0x111827"
-    }
-    color_hex = colors.get(theme, "0x0f5132")
-    cmd = [
-        "ffmpeg", "-y", "-f", "lavfi", "-i", f"color=c={color_hex}:s=1080x1920:d={duration}",
-        "-vf", "noise=alls=20:allf=t",
-        "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", out_path
+    # 2. الخطة البديلة: خلفية لونية متدرجة (لو مفيش نت أو المفتاح ضاع)
+    themes = [
+        ((10, 50, 30), (20, 80, 50)),
+        ((10, 15, 40), (25, 30, 70)),
+        ((60, 40, 20), (100, 70, 30)),
+        ((20, 20, 20), (50, 50, 50))
     ]
-    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return out_path
+    rng = random.Random(seed)
+    top_c, bot_c = rng.choice(themes)
+    
+    base = Image.new("RGB", (1080, 1920), top_c)
+    draw = ImageDraw.Draw(base)
+    for y in range(1920):
+        r = int(top_c[0] + (bot_c[0] - top_c[0]) * y / 1920)
+        g = int(top_c[1] + (bot_c[1] - top_c[1]) * y / 1920)
+        b = int(top_c[2] + (bot_c[2] - top_c[2]) * y / 1920)
+        draw.line([(0, y), (1080, y)], fill=(r, g, b))
+        
+    base.save(base_path)
+    dust = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    dust.save(dust_path)
+    return base_path, dust_path
