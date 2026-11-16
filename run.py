@@ -11,6 +11,7 @@ rc = pick(n)
 video, title, nxt = make_chunk(p["surah"], p["ayah"], rc)
 print("Made:", title)
 
+# 1. رفع يوتيوب
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
     token_uri="https://oauth2.googleapis.com/token",
     client_id=os.environ["YT_CLIENT_ID"],
@@ -25,19 +26,35 @@ r = yt.videos().insert(part="snippet,status",
     media_body=MediaFileUpload(video, resumable=True)).execute()
 print("YouTube OK:", r["id"])
 
+# 2. رفع فيسبوك (لو المفاتيح موجودة)
 pid, tok = os.environ.get("FB_PAGE_ID"), os.environ.get("FB_PAGE_TOKEN")
 if pid and tok:
     g = f"https://graph.facebook.com/v21.0/{pid}/video_reels"
     s = requests.post(g, data={"upload_phase": "start", "access_token": tok}).json()
     data = open(video, "rb").read()
-    requests.post(s["upload_url"], data=data, headers={
-        "Authorization": f"OAuth {tok}", "offset": "0",
-        "file_size": str(len(data))})
-    requests.post(g, data={"upload_phase": "finish", "video_id": s["video_id"],
-        "video_state": "PUBLISHED", "description": title + "\n\n#قرآن",
-        "access_token": tok})
+    requests.post(s["upload_url"], data=data, headers={"Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(data))})
+    requests.post(g, data={"upload_phase": "finish", "video_id": s["video_id"], "video_state": "PUBLISHED", "description": title + "\n\n#قرآن", "access_token": tok})
     print("Facebook OK")
 
+# 3. رفع تيك توك
+tiktok_session = os.environ.get("TIKTOK_SESSION")
+if tiktok_session:
+    try:
+        from tiktok_uploader.upload import upload_video
+        with open("cookies.txt", "w", encoding="utf-8") as f:
+            f.write(tiktok_session)
+        
+        print("Uploading to TikTok...")
+        result = upload_video(
+            filename=video,
+            description=title + " #quran #shorts #fyp",
+            cookies="cookies.txt"
+        )
+        print("TikTok OK")
+    except Exception as e:
+        print(f"TikTok upload failed: {e}")
+
+# 4. تحديث التقدم والإحصائيات
 nxt["n"] = n + 1
 json.dump(nxt, open("progress.json", "w"))
 
@@ -45,6 +62,7 @@ try:
     st = json.load(open("stats.json"))
 except Exception:
     st = {"log": []}
+
 st["log"].append({"t": datetime.datetime.utcnow().isoformat() + "Z",
     "title": title, "reciter": RECITERS.get(rc, rc), "yt": r["id"]})
 st["next"] = {"surah": nxt["surah"], "ayah": nxt["ayah"]}
