@@ -1,15 +1,14 @@
-import json, os, requests
+import json, os, datetime, requests
 from make import make_chunk
+from reciters import pick, RECITERS
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 p = json.load(open("progress.json"))
-from reciters import pick
 n = p.get("n", 0)
 rc = pick(n)
 video, title, nxt = make_chunk(p["surah"], p["ayah"], rc)
-nxt["n"] = n + 1
 print("Made:", title)
 
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
@@ -39,10 +38,9 @@ if pid and tok:
         "access_token": tok})
     print("Facebook OK")
 
+nxt["n"] = n + 1
 json.dump(nxt, open("progress.json", "w"))
 
-import datetime
-from reciters import RECITERS
 try:
     st = json.load(open("stats.json"))
 except Exception:
@@ -50,4 +48,5 @@ except Exception:
 st["log"].append({"t": datetime.datetime.utcnow().isoformat() + "Z",
     "title": title, "reciter": RECITERS.get(rc, rc), "yt": r["id"]})
 st["next"] = {"surah": nxt["surah"], "ayah": nxt["ayah"]}
+st["slots"] = (st.get("slots", []) + [os.environ.get("SLOT", "")])[-60:]
 json.dump(st, open("stats.json", "w"), ensure_ascii=False)

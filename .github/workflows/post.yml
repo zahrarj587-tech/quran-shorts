@@ -1,28 +1,41 @@
 name: post
 on:
   schedule:
-    - cron: "0 6,12,18 * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: post
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: sudo apt-get update && sudo apt-get install -y libraqm0 libfribidi0 ffmpeg
-      - run: pip install requests pillow arabic-reshaper python-bidi google-api-python-client google-auth
-      - run: python run.py
+      - id: slot
+        run: python3 slot.py
         env:
+          EVENT: ${{ github.event_name }}
+      - if: steps.slot.outputs.go == 'true'
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - if: steps.slot.outputs.go == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libraqm0 libfribidi0 ffmpeg
+      - if: steps.slot.outputs.go == 'true'
+        run: pip install requests pillow arabic-reshaper python-bidi google-api-python-client google-auth
+      - if: steps.slot.outputs.go == 'true'
+        run: python run.py
+        env:
+          SLOT: ${{ steps.slot.outputs.slot }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
-      - run: |
+      - if: steps.slot.outputs.go == 'true'
+        run: |
           git config user.name bot
           git config user.email bot@users.noreply.github.com
           git add progress.json stats.json
