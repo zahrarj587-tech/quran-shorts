@@ -17,14 +17,15 @@ html = """<!DOCTYPE html>
         .card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .hidden { display: none !important; }
         input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: right; border-bottom: 1px solid #334155; }
+        .table-container { overflow-x: auto; width: 100%; }
+        table { width: 100%; min-width: 400px; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: right; border-bottom: 1px solid #334155; white-space: nowrap; }
         th { background: #0f172a; color: var(--gold); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-box { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--gold); }
         .stat-val { font-size: 24px; font-weight: bold; margin-top: 10px; color: var(--accent); }
-        .tab-btn { background: #334155; margin-right: 5px; }
-        .tab-btn.active { background: var(--accent); }
+        .add-row { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        @media(min-width: 600px) { .add-row { flex-direction: row; } .add-row input { margin-bottom: 0; } }
     </style>
 </head>
 <body>
@@ -34,14 +35,12 @@ html = """<!DOCTYPE html>
         <button id="loginBtn" class="btn" onclick="login()">دخول الأدمن</button>
     </div>
 
-    <!-- Stats -->
     <div class="stats-grid" id="stats">
         <div class="stat-box"><div>التقدم الحالي</div><div class="stat-val" id="progress">...</div></div>
         <div class="stat-box"><div>آخر فيديو</div><div class="stat-val" id="lastVideo">...</div></div>
-        <div class="stat-box"><div>النشر القادم</div><div class="stat-val" id="nextPost">...</div></div>
+        <div class="stat-box"><div>آخر ميعاد تم</div><div class="stat-val" id="nextPost">...</div></div>
     </div>
 
-    <!-- Admin Panel -->
     <div id="adminPanel" class="hidden">
         <div class="card">
             <h3>⚡ إجراءات سريعة</h3>
@@ -51,23 +50,27 @@ html = """<!DOCTYPE html>
 
         <div class="card">
             <h3>🎙️ إدارة القراء</h3>
-            <table>
-                <thead><tr><th>المفتاح (Key)</th><th>الاسم (Name)</th><th>إجراء</th></tr></thead>
-                <tbody id="recitersTable"></tbody>
-            </table>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <input type="text" id="newReciterKey" placeholder="مثال: Yasser_Ad-Dussary_128kbps">
-                <input type="text" id="newReciterName" placeholder="مثال: ياسر الدوسري">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>المفتاح (Key)</th><th>الاسم (Name)</th><th>إجراء</th></tr></thead>
+                    <tbody id="recitersTable"></tbody>
+                </table>
+            </div>
+            <div class="add-row">
+                <input type="text" id="newReciterKey" placeholder="المفتاح (مثال: Yasser_Ad-Dussary_128kbps)">
+                <input type="text" id="newReciterName" placeholder="الاسم (مثال: ياسر الدوسري)">
                 <button class="btn" onclick="addReciter()">إضافة</button>
             </div>
         </div>
 
         <div class="card">
             <h3>⏰ إدارة المواعيد (بالدقائق)</h3>
-            <table>
-                <thead><tr><th>الميعاد</th><th>الفارق (Offset)</th><th>إجراء</th></tr></thead>
-                <tbody id="slotsTable"></tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>الميعاد</th><th>الفارق (Offset)</th><th>إجراء</th></tr></thead>
+                    <tbody id="slotsTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -75,9 +78,7 @@ html = """<!DOCTYPE html>
 <script>
     const REPO = "zahrarj587-tech/quran-shorts";
     let PAT = localStorage.getItem("gh_pat") || "";
-    let recitersSha = "", slotsSha = "";
-
-    // Load Stats on start
+    
     async function loadStats() {
         try {
             const [progRes, statsRes] = await Promise.all([
@@ -88,7 +89,13 @@ html = """<!DOCTYPE html>
             const stats = await statsRes.json();
             document.getElementById("progress").innerText = `سورة ${prog.surah} - آية ${prog.ayah}`;
             document.getElementById("lastVideo").innerText = stats.next ? `آية ${stats.next.ayah}` : "لا يوجد";
-            document.getElementById("nextPost").innerText = stats.slots && stats.slots.length > 0 ? stats.slots[stats.slots.length-1].split('-')[1] : "غير متاح";
+            
+            let lastSlot = "لا يوجد";
+            if (stats.slots && stats.slots.length > 0) {
+                let parts = stats.slots[stats.slots.length - 1].split('-');
+                lastSlot = parts.length > 3 ? parts[3] : parts[parts.length-1];
+            }
+            document.getElementById("nextPost").innerText = lastSlot;
         } catch(e) { console.log(e); }
     }
 
@@ -106,7 +113,6 @@ html = """<!DOCTYPE html>
         loadSlots();
     }
 
-    // API Helpers
     async function getFile(path) {
         const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, { headers: { 'Authorization': `Bearer ${PAT}` } });
         const data = await res.json();
@@ -128,7 +134,6 @@ html = """<!DOCTYPE html>
     async function loadReciters() {
         try {
             const { data, sha } = await getFile("reciters.json");
-            recitersSha = sha;
             let html = "";
             for (let [key, name] of Object.entries(data)) {
                 html += `<tr><td dir="ltr">${key}</td><td>${name}</td><td><button class="btn btn-danger" onclick="deleteReciter('${key}')">حذف</button></td></tr>`;
@@ -164,10 +169,9 @@ html = """<!DOCTYPE html>
     async function loadSlots() {
         try {
             const { data, sha } = await getFile("slots.json");
-            slotsSha = sha;
             let html = "";
             for (let [key, offset] of Object.entries(data)) {
-                html += `<tr><td>${key}</td><td><input type="number" id="off_${key}" value="${offset}" style="width:80px;"></td><td><button class="btn" onclick="saveSlot('${key}')">حفظ</button></td></tr>`;
+                html += `<tr><td>${key}</td><td><input type="number" id="off_${key}" value="${offset}" style="width:80px; margin:0;"></td><td><button class="btn" onclick="saveSlot('${key}')">حفظ</button></td></tr>`;
             }
             document.getElementById("slotsTable").innerHTML = html;
         } catch(e) { console.log(e); }
@@ -206,4 +210,4 @@ html = """<!DOCTYPE html>
 os.makedirs("docs", exist_ok=True)
 with open("docs/index.html", "w", encoding="utf-8") as f:
     f.write(html)
-print("✅ تم بناء الداشبورد الجديدة بنجاح!")
+print("✅ تم تحديث الداشبورد بنجاح!")
