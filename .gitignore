@@ -1,3 +1,7 @@
 work/
 __pycache__/
 *.mp4
+*.bak
+get_token.py
+client_secret*
+*.env
