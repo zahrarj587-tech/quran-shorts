@@ -3,11 +3,17 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force post?'
+        default: 'false'
+
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 permissions:
   contents: write
+
 jobs:
   post:
     runs-on: ubuntu-latest
@@ -30,6 +36,7 @@ jobs:
         run: python slot.py
         env:
           EVENT: ${{ github.event_name }}
+          FORCE: ${{ github.event.inputs.force }}
           
       - name: Run python run.py
         if: steps.slot.outputs.go == 'true'

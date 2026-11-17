@@ -286,7 +286,7 @@ html = """<!DOCTYPE html>
             const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/post.yml/dispatches`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' },
-                body: JSON.stringify({ ref: 'main' })
+                body: JSON.stringify({ ref: "main", inputs: { force: "true" } })
             });
             if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل ✅";
             else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌";
