@@ -12,6 +12,12 @@ for k, off in OFFSETS.items():
     slots.append((f"{today}-{k}", t))
     print(k, t.strftime("%H:%M"))
 
+# --- الموعد التجريبي اللي هنشوفه ---
+test_t = now.replace(hour=7, minute=15, second=0, microsecond=0)
+slots.append((f"{today}-test-0715", test_t))
+print("TEST SLOT ->", test_t.strftime("%H:%M"))
+# -----------------------------------
+
 try:
     done = set(json.load(open("stats.json")).get("slots", []))
 except Exception:
@@ -23,7 +29,6 @@ for sid, t in slots:
         slot = sid
         break
 
-# تعديل مهم: النشر اليدوي بيشتغل بس لو الداشبورد بعت FORCE=true
 if os.environ.get("FORCE") == "true" and not slot:
     slot = f"{today}-manual-{now:%H%M}"
 
