@@ -84,7 +84,7 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         inputs = []
         filters = []
         
-        # الخلفية والغبار
+        # الخلفية والغبار (بنعمل زووم بسيط للصورة)
         inputs.extend(["-loop", "1", "-framerate", "30", "-i", base_png])
         inputs.extend(["-loop", "1", "-framerate", "30", "-i", dust_png])
         
@@ -104,8 +104,9 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         audio_idx = 2 + n_chunks
         
         off = total
-        filters.append(f"[0:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/9)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/11)'[a]")
-        filters.append(f"[1:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*cos((t+{off})/5)':y='(ih-{H})/2+(ih-{H})/2*sin((t+{off})/6)'[d]")
+        # تأثير Ken Burns (زووم بطيء وحركة)
+        filters.append(f"[0:v]scale=1400:2488,crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/20)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/25)',format=yuv420p[a]")
+        filters.append(f"[1:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*cos((t+{off})/15)':y='(ih-{H})/2+(ih-{H})/2*sin((t+{off})/18)'[d]")
         filters.append(f"[a][d]overlay=0:0[c]")
         
         # تركيب المقاطع بالترتيب مع التفعيل
@@ -120,9 +121,11 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         fc = ";".join(filters)
         out = f"{WORK}/{i}.mp4"
         
+        # إضافة فلتر تطبيع الصوت (loudnorm) عشان الصوت يبقى عالي وواضح
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + inputs + [
             "-filter_complex", fc,
             "-map", f"[{prev}]", "-map", f"{audio_idx}:a", 
+            "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
             "-shortest", "-r", "30",
             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
             "-c:a", "aac", out], check=True)
@@ -132,8 +135,14 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
     lst = f"{WORK}/list.txt"
     open(lst, "w").write("".join(f"file '{os.path.basename(c)}'\n" for c in clips))
     final = f"{WORK}/final.mp4"
+    
+    # إضافة Fade In في البداية و Fade Out في النهاية للفيديو ككل
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat",
-        "-i", lst, "-c", "copy", final], check=True)
+        "-i", lst, 
+        "-vf", f"fade=t=in:st=0:d=0.5,fade=t=out:st={total-0.5}:d=0.5",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-c:a", "copy", final], check=True)
+        
     title = build_title(name, reciter, start_ayah, last)
     if last >= len(ayahs):
         nxt = {"surah": surah % 114 + 1, "ayah": 1}
