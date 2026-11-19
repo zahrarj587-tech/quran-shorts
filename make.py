@@ -54,6 +54,10 @@ def build_title(surah_name, reciter, first, last):
     rng = f"({first}-{last})" if first != last else f"({first})"
     return f"سورة {name} {rng} | {RECITERS[reciter]}"
 
+def chunk_text(text, max_words=3):
+    words = text.split()
+    return [" ".join(words[i:i+max_words]) for i in range(0, len(words), max_words)]
+
 def make_chunk(surah, start_ayah, reciter=RECITER):
     os.makedirs(WORK, exist_ok=True)
     base_png, dust_png = make_bg(surah * 7 + start_ayah, WORK)
@@ -72,20 +76,59 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         dur = duration(mp3)
         if clips and total + dur > MAX_SECONDS:
             break
-        png, out = f"{WORK}/{i}.png", f"{WORK}/{i}.mp4"
-        render(text, png)
+        
+        chunks = chunk_text(text)
+        n_chunks = len(chunks)
+        chunk_dur = dur / n_chunks
+        
+        inputs = []
+        filters = []
+        
+        # الخلفية والغبار
+        inputs.extend(["-loop", "1", "-framerate", "30", "-i", base_png])
+        inputs.extend(["-loop", "1", "-framerate", "30", "-i", dust_png])
+        
+        # المقاطع النصية
+        for idx, chunk in enumerate(chunks):
+            png = f"{WORK}/{i}_{idx}.png"
+            render(chunk, png)
+            inputs.extend(["-loop", "1", "-framerate", "30", "-i", png])
+            start = idx * chunk_dur
+            end = (idx + 1) * chunk_dur
+            fade_dur = min(0.4, chunk_dur / 2.0)
+            fade_out_st = max(start, end - fade_dur)
+            filters.append(f"[{2+idx}:v]format=rgba,fade=t=in:st={start}:d={fade_dur}:alpha=1,fade=t=out:st={fade_out_st}:d={fade_dur}:alpha=1[t{idx}]")
+            
+        # الصوت
+        inputs.extend(["-i", mp3])
+        audio_idx = 2 + n_chunks
+        
         off = total
-        fc = (f"[0:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/9)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/11)'[a];"
-              f"[1:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*cos((t+{off})/5)':y='(ih-{H})/2+(ih-{H})/2*sin((t+{off})/6)'[d];"
-              f"[a][d]overlay=0:0[c];[c][2:v]overlay=0:0[v]")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
-            "-loop", "1", "-framerate", "30", "-i", base_png,
-            "-loop", "1", "-framerate", "30", "-i", dust_png,
-            "-i", png, "-i", mp3, "-filter_complex", fc,
-            "-map", "[v]", "-map", "3:a", "-shortest", "-r", "30",
+        filters.append(f"[0:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/9)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/11)'[a]")
+        filters.append(f"[1:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*cos((t+{off})/5)':y='(ih-{H})/2+(ih-{H})/2*sin((t+{off})/6)'[d]")
+        filters.append(f"[a][d]overlay=0:0[c]")
+        
+        # تركيب المقاطع بالترتيب مع التفعيل
+        prev = "c"
+        for idx in range(n_chunks):
+            start = idx * chunk_dur
+            end = (idx + 1) * chunk_dur
+            next_label = f"v{idx}"
+            filters.append(f"[{prev}][t{idx}]overlay=0:0:enable='between(t,{start},{end})'[{next_label}]")
+            prev = next_label
+            
+        fc = ";".join(filters)
+        out = f"{WORK}/{i}.mp4"
+        
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + inputs + [
+            "-filter_complex", fc,
+            "-map", f"[{prev}]", "-map", f"{audio_idx}:a", 
+            "-shortest", "-r", "30",
             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
             "-c:a", "aac", out], check=True)
+            
         clips.append(out); total += dur; last = i; i += 1
+        
     lst = f"{WORK}/list.txt"
     open(lst, "w").write("".join(f"file '{os.path.basename(c)}'\n" for c in clips))
     final = f"{WORK}/final.mp4"
