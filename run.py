@@ -11,11 +11,28 @@ rc = pick(n)
 video, title, nxt = make_chunk(p["surah"], p["ayah"], rc)
 print("Made:", title)
 
-# --- التعديل الجديد: وضع التجربة ---
+# --- وضع التجربة والتحميل المباشر ---
 if os.environ.get("TEST_MODE") == "true":
-    print("🚧 TEST MODE ACTIVE: Video generated successfully. Skipping upload.")
-    sys.exit(0)
-# ----------------------------------
+    print("🚧 TEST MODE: Uploading video for quick download...")
+    try:
+        # رفع الفيديو على موقع Catbox المجاني والسريع
+        url = "https://catbox.moe/user/api.php"
+        data = {"reqtype": "fileupload"}
+        with open(video, "rb") as f:
+            files = {"fileToUpload": f}
+            response = requests.post(url, data=data, files=files, timeout=60)
+        
+        if response.status_code == 200 and response.text.startswith("https://"):
+            video_url = response.text.strip()
+            print(f"Video URL: {video_url}")
+            json.dump({"url": video_url, "time": datetime.datetime.now().isoformat()}, open("test_video.json", "w"))
+        else:
+            print(f"Upload failed. Status: {response.status_code}, Response: {response.text}")
+    except Exception as e:
+        print(f"Error uploading to catbox: {e}")
+    
+    sys.exit(0) # الخروج من الكود عشان ميرفعش على يوتيوب
+# ------------------------------------
 
 # 1. يوتيوب
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
