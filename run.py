@@ -1,4 +1,4 @@
-import json, os, datetime, requests
+import json, os, datetime, requests, sys
 from make import make_chunk
 from reciters import pick, RECITERS
 from google.oauth2.credentials import Credentials
@@ -10,6 +10,12 @@ n = p.get("n", 0)
 rc = pick(n)
 video, title, nxt = make_chunk(p["surah"], p["ayah"], rc)
 print("Made:", title)
+
+# --- التعديل الجديد: وضع التجربة ---
+if os.environ.get("TEST_MODE") == "true":
+    print("🚧 TEST MODE ACTIVE: Video generated successfully. Skipping upload.")
+    sys.exit(0)
+# ----------------------------------
 
 # 1. يوتيوب
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],

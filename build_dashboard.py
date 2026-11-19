@@ -8,36 +8,20 @@ html = """<!DOCTYPE html>
     <title>Quran Shorts | Premium Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-gradient: linear-gradient(-45deg, #0f172a, #1e1b4b, #064e3b, #0f172a);
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.4);
-            --danger: #ef4444;
-            --gold: #fbbf24;
-        }
+        :root { --bg-gradient: linear-gradient(-45deg, #0f172a, #1e1b4b, #064e3b, #0f172a); --glass-bg: rgba(255, 255, 255, 0.03); --glass-border: rgba(255, 255, 255, 0.08); --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #10b981; --accent-glow: rgba(16, 185, 129, 0.4); --danger: #ef4444; --gold: #fbbf24; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body {
-            background: var(--bg-gradient); background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite; color: var(--text-main);
-            min-height: 100vh; padding: 20px; overflow-x: hidden;
-        }
+        body { background: var(--bg-gradient); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: var(--text-main); min-height: 100vh; padding: 20px; overflow-x: hidden; }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .container { max-width: 1000px; margin: auto; animation: fadeIn 0.8s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .header {
-            display: flex; justify-content: space-between; align-items: center; padding: 20px; margin-bottom: 30px;
-            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 20px;
-            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; margin-bottom: 30px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3); }
         .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(to right, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 15px var(--accent-glow); }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 15px var(--accent-glow); margin: 5px; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--accent-glow); }
         .btn:active { transform: translateY(1px); }
         .btn-danger { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+        .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); box-shadow: none; }
+        .btn-outline:hover { background: var(--gold); color: #000; }
         .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; position: relative; overflow: hidden; transition: transform 0.3s ease; }
@@ -62,8 +46,6 @@ html = """<!DOCTYPE html>
         input[type="text"], input[type="number"] { width: 100%; padding: 14px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; font-family: 'Cairo', sans-serif; font-size: 14px; transition: border 0.3s ease, box-shadow 0.3s ease; }
         input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 15px rgba(16,185,129,0.2); }
         .hidden { display: none !important; }
-
-        /* Quran Section */
         .quran-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .quran-page-img { max-width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); }
         .quran-controls { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: center; }
@@ -84,7 +66,6 @@ html = """<!DOCTYPE html>
         <div class="stat-card gold"><div class="stat-title">النشر القادم</div><div class="stat-val" id="nextPostTime">...</div><div class="stat-sub" id="nextPostReciter"></div></div>
     </div>
 
-    <!-- قسم المصحف التفاعلي -->
     <div class="panel">
         <h3>📖 المصحف الشريف (قراءة وتلاوة)</h3>
         <div class="quran-container">
@@ -103,8 +84,10 @@ html = """<!DOCTYPE html>
     <div id="adminPanel" class="hidden">
         <div class="panel" style="text-align: center;">
             <h3>⚡ إجراءات سريعة</h3>
-            <button class="btn" onclick="triggerWorkflow()" style="width: 100%; max-width: 300px; margin: auto;">تشغيل البوت الآن</button>
+            <button class="btn" onclick="triggerWorkflow(false)">تشغيل البوت الآن (نشر)</button>
+            <button class="btn btn-outline" onclick="triggerWorkflow(true)">توليد فيديو للتجربة (بدون نشر)</button>
             <div id="workflowStatus" style="margin-top: 15px; color: var(--gold); font-weight: 600;"></div>
+            <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">لتحميل فيديو التجربة، انتظر انتهاء التشغيل في GitHub Actions ثم انزل لتحت خالص واضغط على ملف <b>Generated-Video</b>.</div>
         </div>
         <div class="panel">
             <h3>🎙️ إدارة القراء</h3>
@@ -129,7 +112,6 @@ html = """<!DOCTYPE html>
     let currentPage = 1;
     let isPlaying = false;
 
-    // --- Quran Logic ---
     async function loadPage(page) {
         page = parseInt(page);
         if (page < 1 || page > 604) return;
@@ -139,57 +121,31 @@ html = """<!DOCTYPE html>
         img.src = `https://api.kalamalah.com/api/mushaf/qatar-mushaf/${page}`;
         document.getElementById("quranStatus").innerText = `جاري تحميل الصفحة ${page}...`;
         img.onload = () => { document.getElementById("quranStatus").innerText = `الصفحة ${page}`; };
-        img.onerror = () => { document.getElementById("quranStatus").innerText = "تعذر تحميل الصفحة. حاول مرة أخرى."; };
-        
-        if (isPlaying) {
-            await playPageAudio(page);
-        }
+        img.onerror = () => { document.getElementById("quranStatus").innerText = "تعذر تحميل الصفحة."; };
+        if (isPlaying) await playPageAudio(page);
     }
-
     async function playPageAudio(page) {
         try {
-            const recitationId = 7; // Mishary Alafasy
+            const recitationId = 7;
             const res = await fetch(`https://api.quran.com/api/v4/recitations/${recitationId}/by_page/${page}`);
             const data = await res.json();
             if (data.audio_files && data.audio_files.length > 0) {
-                const audioUrl = data.audio_files[0].url;
                 const audio = document.getElementById("quranAudio");
-                audio.src = audioUrl;
+                audio.src = data.audio_files[0].url;
                 await audio.play();
                 document.getElementById("playBtn").innerText = "⏸️ إيقاف مؤقت";
                 isPlaying = true;
-            } else {
-                document.getElementById("quranStatus").innerText = "لا يوجد صوت لهذه الصفحة.";
             }
-        } catch(e) {
-            document.getElementById("quranStatus").innerText = "خطأ في تحميل الصوت.";
-        }
+        } catch(e) {}
     }
-
     async function toggleAudio() {
         const audio = document.getElementById("quranAudio");
-        if (isPlaying) {
-            audio.pause();
-            document.getElementById("playBtn").innerText = "▶️ متابعة التلاوة";
-            isPlaying = false;
-        } else {
-            await playPageAudio(currentPage);
-        }
+        if (isPlaying) { audio.pause(); document.getElementById("playBtn").innerText = "▶️ متابعة التلاوة"; isPlaying = false; }
+        else { await playPageAudio(currentPage); }
     }
+    function changePage(delta) { loadPage(currentPage + delta); }
+    function nextPageAuto() { if (currentPage < 604) loadPage(currentPage + 1); }
 
-    function changePage(delta) {
-        loadPage(currentPage + delta);
-    }
-
-    function nextPageAuto() {
-        if (currentPage < 604) {
-            loadPage(currentPage + 1);
-        } else {
-            document.getElementById("quranStatus").innerText = "تمت ختم القرآن الكريم.";
-        }
-    }
-
-    // --- Dashboard Logic ---
     async function loadData() {
         try {
             const [progRes, statsRes, recitersRes, slotsRes] = await Promise.all([
@@ -200,12 +156,10 @@ html = """<!DOCTYPE html>
             ]);
             const prog = await progRes.json(); const stats = await statsRes.json();
             recitersData = await recitersRes.json(); slotsData = await slotsRes.json();
-
             document.getElementById("progress").innerText = `سورة ${prog.surah} - آية ${prog.ayah}`;
             const reciterKeys = Object.keys(recitersData);
             const nextReciterKey = reciterKeys[prog.n % reciterKeys.length];
             document.getElementById("nextPostReciter").innerText = `بصوت: ${recitersData[nextReciterKey] || nextReciterKey}`;
-
             if (stats.log && stats.log.length > 0) {
                 const lastLog = stats.log[stats.log.length - 1];
                 document.getElementById("lastPostTime").innerText = `${lastLog.slot || 'سابقاً'}`;
@@ -214,7 +168,6 @@ html = """<!DOCTYPE html>
             calculateNextPost();
         } catch(e) { console.log(e); }
     }
-
     async function calculateNextPost() {
         try {
             const now = new Date();
@@ -236,7 +189,6 @@ html = """<!DOCTYPE html>
             } else { document.getElementById("nextPostTime").innerText = "غداً (شروق)"; }
         } catch(e) { document.getElementById("nextPostTime").innerText = "تعذر الحساب"; }
     }
-
     function login() { if (PAT) { showAdmin(); return; } let token = prompt("أدخل GitHub Token:"); if (token) { PAT = token; localStorage.setItem("gh_pat", PAT); showAdmin(); } }
     function showAdmin() {
         document.getElementById("adminPanel").classList.remove("hidden");
@@ -251,9 +203,21 @@ html = """<!DOCTYPE html>
     async function deleteReciter(key) { if (!confirm("هل أنت متأكد من الحذف؟")) return; try { const { data, sha } = await getFile("reciters.json"); delete data[key]; await updateFile("reciters.json", data, sha, `Delete reciter: ${key}`); loadReciters(); loadData(); } catch(e) { alert("حدث خطأ أثناء الحذف"); } }
     async function loadSlots() { try { const { data, sha } = await getFile("slots.json"); let html = ""; for (let [key, offset] of Object.entries(data)) { html += `<div class="list-item"><div class="item-info"><span class="item-name" style="color:var(--gold);">${key}</span></div><div style="display:flex; gap:10px; align-items:center;"><input type="number" id="off_${key}" value="${offset}" style="width:80px; text-align:center;"><button class="btn btn-sm" onclick="saveSlot('${key}')">حفظ</button></div></div>`; } document.getElementById("slotsList").innerHTML = html; } catch(e) { console.log(e); } }
     async function saveSlot(key) { const newOffset = parseInt(document.getElementById(`off_${key}`).value); if (isNaN(newOffset)) return alert("أدخل رقم صحيح"); try { const { data, sha } = await getFile("slots.json"); data[key] = newOffset; await updateFile("slots.json", data, sha, `Update slot ${key} to ${newOffset}`); alert("تم الحفظ!"); loadData(); } catch(e) { alert("حدث خطأ"); } }
-    async function triggerWorkflow() { document.getElementById("workflowStatus").innerText = "جاري التشغيل..."; try { const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/post.yml/dispatches`, { method: 'POST', headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify({ ref: "main", inputs: { force: "true" } }) }); if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل بنجاح ✅"; else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌"; } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ ❌"; } }
+    
+    async function triggerWorkflow(isTest = false) {
+        document.getElementById("workflowStatus").innerText = "جاري التشغيل...";
+        try {
+            let payload = { ref: "main", inputs: { force: "true", test_mode: isTest ? "true" : "false" } };
+            const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/post.yml/dispatches`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل بنجاح ✅ (انتظر النتيجة في GitHub)";
+            else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌";
+        } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ ❌"; }
+    }
 
-    // Init
     loadPage(1);
     loadData();
     if (PAT) showAdmin();
@@ -264,4 +228,4 @@ html = """<!DOCTYPE html>
 os.makedirs("docs", exist_ok=True)
 with open("docs/index.html", "w", encoding="utf-8") as f:
     f.write(html)
-print("✅ Quran Reader Dashboard Built Successfully!")
+print("✅ Dashboard Updated with Test Mode!")

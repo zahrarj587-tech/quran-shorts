@@ -7,6 +7,9 @@ on:
       force:
         description: 'Force post?'
         default: 'false'
+      test_mode:
+        description: 'Test Mode (Generate without uploading)'
+        default: 'false'
 
 concurrency:
   group: ${{ github.workflow }}
@@ -49,9 +52,18 @@ jobs:
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           SLOT: ${{ steps.slot.outputs.slot }}
+          TEST_MODE: ${{ github.event.inputs.test_mode }}
+          
+      # الخطوة الجديدة: حفظ الفيديو لوضع التجربة
+      - name: Upload Video Artifact
+        if: steps.slot.outputs.go == 'true' && github.event.inputs.test_mode == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Generated-Video
+          path: work/final.mp4
           
       - name: Commit progress
-        if: steps.slot.outputs.go == 'true'
+        if: steps.slot.outputs.go == 'true' && github.event.inputs.test_mode != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
