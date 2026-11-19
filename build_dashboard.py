@@ -5,83 +5,166 @@ html = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quran Shorts Admin</title>
+    <title>Quran Shorts | Premium Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #10b981; --danger: #ef4444; --gold: #fbbf24; --blue: #3b82f6; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
-        .btn { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn:hover { opacity: 0.8; }
-        .btn-danger { background: var(--danger); }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
-        .card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        :root {
+            --bg-gradient: linear-gradient(-45deg, #0f172a, #1e1b4b, #064e3b, #0f172a);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --gold: #fbbf24;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
+        body {
+            background: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container { max-width: 1000px; margin: auto; animation: fadeIn 0.8s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Header */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px; margin-bottom: 30px;
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);
+        }
+        .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(to right, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .btn {
+            background: var(--accent); color: white; border: none; padding: 12px 24px;
+            border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 15px;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px var(--accent-glow);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--accent-glow); }
+        .btn:active { transform: translateY(1px); }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card {
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 25px; position: relative; overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 4px;
+            background: linear-gradient(to right, transparent, var(--accent), transparent);
+        }
+        .stat-card.blue::before { background: linear-gradient(to right, transparent, #3b82f6, transparent); }
+        .stat-card.gold::before { background: linear-gradient(to right, transparent, var(--gold), transparent); }
+        
+        .stat-title { font-size: 14px; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; }
+        .stat-val { font-size: 28px; font-weight: 900; color: var(--text-main); }
+        .stat-sub { font-size: 13px; color: var(--accent); margin-top: 8px; font-weight: 600; }
+
+        /* Panels */
+        .panel {
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 25px; margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .panel h3 { margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        
+        /* Lists */
+        .list-container { display: flex; flex-direction: column; gap: 12px; }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05); transition: background 0.3s;
+        }
+        .list-item:hover { background: rgba(0,0,0,0.4); }
+        .item-info { display: flex; flex-direction: column; }
+        .item-name { font-weight: 700; font-size: 16px; }
+        .item-key { font-size: 11px; color: var(--text-muted); direction: ltr; text-align: right; margin-top: 4px; }
+
+        /* Inputs */
+        .add-row { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--glass-border); }
+        @media(min-width: 600px) { .add-row { flex-direction: row; align-items: center; } }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 14px; border-radius: 12px;
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            color: white; font-family: 'Cairo', sans-serif; font-size: 14px;
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+        }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 15px rgba(16,185,129,0.2); }
+
         .hidden { display: none !important; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        
-        .list-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
-        .item-info { display: flex; flex-direction: column; overflow: hidden; margin-left: 10px; }
-        .item-name { font-weight: bold; font-size: 16px; color: var(--text); margin-bottom: 4px; }
-        .item-key { font-size: 11px; color: #94a3b8; direction: ltr; text-align: right; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
-        @media(min-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
-        
-        .stat-box { background: var(--card); padding: 15px; border-radius: 8px; border-right: 4px solid var(--gold); display: flex; flex-direction: column; justify-content: center; }
-        .stat-title { font-size: 14px; color: #94a3b8; margin-bottom: 5px; }
-        .stat-val { font-size: 18px; font-weight: bold; color: var(--text); }
-        .stat-sub { font-size: 13px; color: var(--accent); margin-top: 5px; }
-        
-        .add-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155; }
-        @media(min-width: 600px) { .add-row { flex-direction: row; align-items: center; } .add-row input { margin-bottom: 0; } }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h2>🕌 لوحة التحكم</h2>
+        <h1>🕌 Quran Shorts</h1>
         <button id="loginBtn" class="btn" onclick="login()">دخول الأدمن</button>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-box" style="border-color: var(--accent);">
+    <div class="stats-grid" id="stats">
+        <div class="stat-card">
             <div class="stat-title">التقدم الحالي</div>
-            <div class="stat-val" id="progress">جاري التحميل...</div>
+            <div class="stat-val" id="progress">...</div>
         </div>
-        
-        <div class="stat-box" style="border-color: var(--blue);">
+        <div class="stat-card blue">
             <div class="stat-title">آخر فيديو تم نشره</div>
-            <div class="stat-val" id="lastPostTime">جاري التحميل...</div>
+            <div class="stat-val" id="lastPostTime">...</div>
             <div class="stat-sub" id="lastPostReciter"></div>
         </div>
-
-        <div class="stat-box" style="border-color: var(--gold);">
+        <div class="stat-card gold">
             <div class="stat-title">النشر القادم</div>
-            <div class="stat-val" id="nextPostTime">جاري الحساب...</div>
+            <div class="stat-val" id="nextPostTime">...</div>
             <div class="stat-sub" id="nextPostReciter"></div>
         </div>
     </div>
 
     <div id="adminPanel" class="hidden">
-        <div class="card">
+        <div class="panel" style="text-align: center;">
             <h3>⚡ إجراءات سريعة</h3>
-            <button class="btn" onclick="triggerWorkflow()">تشغيل البوت الآن</button>
-            <span id="workflowStatus" style="margin-right:10px; color:var(--gold); font-size:14px;"></span>
+            <button class="btn" onclick="triggerWorkflow()" style="width: 100%; max-width: 300px; margin: auto;">تشغيل البوت الآن (Run Workflow)</button>
+            <div id="workflowStatus" style="margin-top: 15px; color: var(--gold); font-weight: 600;"></div>
         </div>
 
-        <div class="card">
+        <div class="panel">
             <h3>🎙️ إدارة القراء</h3>
             <div class="list-container" id="recitersList"></div>
             
             <div class="add-row">
                 <input type="text" id="newReciterName" placeholder="اسم القارئ (بالعربي)">
-                <input type="text" id="newReciterKey" placeholder="المفتاح (إنجليزي بدون مسافات)">
+                <input type="text" id="newReciterKey" placeholder="المفتاح (إنجليزي)">
                 <button class="btn" onclick="addReciter()">إضافة</button>
             </div>
         </div>
 
-        <div class="card">
+        <div class="panel">
             <h3>⏰ إدارة المواعيد (بالدقائق)</h3>
             <div class="list-container" id="slotsList"></div>
         </div>
@@ -96,29 +179,24 @@ html = """<!DOCTYPE html>
     
     async function loadData() {
         try {
-            // Fetch JSON files directly from GitHub raw
             const [progRes, statsRes, recitersRes, slotsRes] = await Promise.all([
                 fetch(`https://raw.githubusercontent.com/${REPO}/main/progress.json`),
                 fetch(`https://raw.githubusercontent.com/${REPO}/main/stats.json`),
                 fetch(`https://raw.githubusercontent.com/${REPO}/main/reciters.json`),
                 fetch(`https://raw.githubusercontent.com/${REPO}/main/slots.json`)
             ]);
-            
             const prog = await progRes.json();
             const stats = await statsRes.json();
             recitersData = await recitersRes.json();
             slotsData = await slotsRes.json();
 
-            // 1. Progress
             document.getElementById("progress").innerText = `سورة ${prog.surah} - آية ${prog.ayah}`;
             
-            // 2. Next Reciter
             const reciterKeys = Object.keys(recitersData);
             const nextReciterKey = reciterKeys[prog.n % reciterKeys.length];
             const nextReciterName = recitersData[nextReciterKey] || nextReciterKey;
             document.getElementById("nextPostReciter").innerText = `بصوت: ${nextReciterName}`;
 
-            // 3. Last Post Info
             if (stats.log && stats.log.length > 0) {
                 const lastLog = stats.log[stats.log.length - 1];
                 const lastDate = new Date(lastLog.time || Date.now());
@@ -128,48 +206,34 @@ html = """<!DOCTYPE html>
             } else {
                 document.getElementById("lastPostTime").innerText = "لا يوجد";
             }
-
-            // 4. Next Post Calculation
             calculateNextPost();
-
         } catch(e) { console.log(e); }
     }
 
     async function calculateNextPost() {
         try {
             const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
             const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5`);
             const data = await res.json();
             const timings = data.data.timings;
-
             let upcomingSlots = [];
             for (let [key, offset] of Object.entries(slotsData)) {
                 if (!timings[key]) continue;
                 let [h, m] = timings[key].split(':').map(Number);
                 let slotTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
                 slotTime.setMinutes(slotTime.getMinutes() + offset);
-                
-                if (slotTime > now) {
-                    upcomingSlots.push({ name: key, time: slotTime });
-                }
+                if (slotTime > now) { upcomingSlots.push({ name: key, time: slotTime }); }
             }
-            
             upcomingSlots.sort((a, b) => a.time - b.time);
-
             if (upcomingSlots.length > 0) {
                 const next = upcomingSlots[0];
                 const timeStr = next.time.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
                 document.getElementById("nextPostTime").innerText = `الساعة: ${timeStr}`;
-                document.getElementById("nextPostReciter").innerHTML += `<br><span style="color:#94a3b8; font-size:11px;">(ميعاد: ${next.name})</span>`;
+                document.getElementById("nextPostReciter").innerHTML += `<br><span style="color:var(--text-muted); font-size:11px;">(ميعاد: ${next.name})</span>`;
             } else {
-                // If no more today, calculate tomorrow's Sunrise
                 document.getElementById("nextPostTime").innerText = "غداً (شروق)";
             }
-        } catch(e) { 
-            document.getElementById("nextPostTime").innerText = "تعذر الحساب";
-            console.log(e); 
-        }
+        } catch(e) { document.getElementById("nextPostTime").innerText = "تعذر الحساب"; }
     }
 
     function login() {
@@ -181,6 +245,7 @@ html = """<!DOCTYPE html>
     function showAdmin() {
         document.getElementById("adminPanel").classList.remove("hidden");
         document.getElementById("loginBtn").innerText = "خروج";
+        document.getElementById("loginBtn").classList.add("btn-danger");
         document.getElementById("loginBtn").onclick = () => { localStorage.removeItem("gh_pat"); location.reload(); };
         loadReciters();
         loadSlots();
@@ -232,8 +297,7 @@ html = """<!DOCTYPE html>
             await updateFile("reciters.json", data, sha, `Add reciter: ${name}`);
             document.getElementById("newReciterName").value = "";
             document.getElementById("newReciterKey").value = "";
-            loadReciters();
-            loadData(); // Refresh stats
+            loadReciters(); loadData();
         } catch(e) { alert("حدث خطأ أثناء الإضافة"); }
     }
 
@@ -243,8 +307,7 @@ html = """<!DOCTYPE html>
             const { data, sha } = await getFile("reciters.json");
             delete data[key];
             await updateFile("reciters.json", data, sha, `Delete reciter: ${key}`);
-            loadReciters();
-            loadData();
+            loadReciters(); loadData();
         } catch(e) { alert("حدث خطأ أثناء الحذف"); }
     }
 
@@ -259,7 +322,7 @@ html = """<!DOCTYPE html>
                         <span class="item-name" style="color:var(--gold);">${key}</span>
                     </div>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="number" id="off_${key}" value="${offset}" style="width:70px; margin:0; padding:5px;">
+                        <input type="number" id="off_${key}" value="${offset}" style="width:80px; text-align:center;">
                         <button class="btn btn-sm" onclick="saveSlot('${key}')">حفظ</button>
                     </div>
                 </div>`;
@@ -275,8 +338,7 @@ html = """<!DOCTYPE html>
             const { data, sha } = await getFile("slots.json");
             data[key] = newOffset;
             await updateFile("slots.json", data, sha, `Update slot ${key} to ${newOffset}`);
-            alert("تم الحفظ!");
-            loadData();
+            alert("تم الحفظ!"); loadData();
         } catch(e) { alert("حدث خطأ"); }
     }
 
@@ -288,7 +350,7 @@ html = """<!DOCTYPE html>
                 headers: { 'Authorization': `Bearer ${PAT}`, 'Accept': 'application/vnd.github.v3+json' },
                 body: JSON.stringify({ ref: "main", inputs: { force: "true" } })
             });
-            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل ✅";
+            if (res.ok) document.getElementById("workflowStatus").innerText = "تم التشغيل بنجاح ✅";
             else document.getElementById("workflowStatus").innerText = "فشل التشغيل ❌";
         } catch(e) { document.getElementById("workflowStatus").innerText = "خطأ ❌"; }
     }
@@ -302,4 +364,4 @@ html = """<!DOCTYPE html>
 os.makedirs("docs", exist_ok=True)
 with open("docs/index.html", "w", encoding="utf-8") as f:
     f.write(html)
-print("✅ Done!")
+print("✅ Premium Dashboard Built Successfully!")
