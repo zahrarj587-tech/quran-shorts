@@ -5,5 +5,3 @@ google-auth-httplib2
 Pillow
 arabic_reshaper
 python-bidi
-tiktok-uploader
-playwright
