@@ -1,6 +1,6 @@
 import os, subprocess, requests
 from bg import make_bg
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import arabic_reshaper
 from bidi.algorithm import get_display
 
@@ -84,8 +84,9 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         inputs = []
         filters = []
         
-        # الخلفية والغبار (بنعمل زووم بسيط للصورة)
+        # الخلفية (تأثير سينمائي)
         inputs.extend(["-loop", "1", "-framerate", "30", "-i", base_png])
+        # صورة الغبار (شفافة حالياً، هنحولها لجزيئات متحركة)
         inputs.extend(["-loop", "1", "-framerate", "30", "-i", dust_png])
         
         # المقاطع النصية
@@ -93,8 +94,13 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
             png = f"{WORK}/{i}_{idx}.png"
             render(chunk, png)
             inputs.extend(["-loop", "1", "-framerate", "30", "-i", png])
-            start = idx * chunk_dur
+            
+            # تأخير ظهور النص بمقدار 0.3 ثانية عشان يسبق الصوت
+            delay = 0.3 
+            start = (idx * chunk_dur) + delay
             end = (idx + 1) * chunk_dur
+            if end > dur: end = dur # تأمين عشان ميتعداش مدة الصوت
+            
             fade_dur = min(0.4, chunk_dur / 2.0)
             fade_out_st = max(start, end - fade_dur)
             filters.append(f"[{2+idx}:v]format=rgba,fade=t=in:st={start}:d={fade_dur}:alpha=1,fade=t=out:st={fade_out_st}:d={fade_dur}:alpha=1[t{idx}]")
@@ -104,16 +110,19 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         audio_idx = 2 + n_chunks
         
         off = total
-        # تأثير Ken Burns (زووم بطيء وحركة)
-        filters.append(f"[0:v]scale=1400:2488,crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/20)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/25)',format=yuv420p[a]")
-        filters.append(f"[1:v]crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*cos((t+{off})/15)':y='(ih-{H})/2+(ih-{H})/2*sin((t+{off})/18)'[d]")
+        # خلفية متحركة بزووم بطيء (Ken Burns) + إضاءة خفيفة
+        filters.append(f"[0:v]scale=1400:2488,crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/25)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/30)',eq=brightness=-0.05:saturation=1.2,format=yuv420p[a]")
+        # تحويل صورة الغبار الشفافة إلى جزيئات متحركة (Noise)
+        filters.append(f"[1:v]format=rgba,noise=alls=12:allf=t+u,eq=brightness=0.1[d]")
         filters.append(f"[a][d]overlay=0:0[c]")
         
-        # تركيب المقاطع بالترتيب مع التفعيل
+        # تركيب النص فوق الخلفية بالترتيب
         prev = "c"
         for idx in range(n_chunks):
-            start = idx * chunk_dur
+            delay = 0.3
+            start = (idx * chunk_dur) + delay
             end = (idx + 1) * chunk_dur
+            if end > dur: end = dur
             next_label = f"v{idx}"
             filters.append(f"[{prev}][t{idx}]overlay=0:0:enable='between(t,{start},{end})'[{next_label}]")
             prev = next_label
@@ -121,7 +130,7 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         fc = ";".join(filters)
         out = f"{WORK}/{i}.mp4"
         
-        # إضافة فلتر تطبيع الصوت (loudnorm) عشان الصوت يبقى عالي وواضح
+        # إضافة فلتر تطبيع الصوت (loudnorm) عشان الصوت يبقى عالي
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + inputs + [
             "-filter_complex", fc,
             "-map", f"[{prev}]", "-map", f"{audio_idx}:a", 
@@ -136,7 +145,7 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
     open(lst, "w").write("".join(f"file '{os.path.basename(c)}'\n" for c in clips))
     final = f"{WORK}/final.mp4"
     
-    # إضافة Fade In في البداية و Fade Out في النهاية للفيديو ككل
+    # إضافة Fade In في البداية و Fade Out في النهاية
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat",
         "-i", lst, 
         "-vf", f"fade=t=in:st=0:d=0.5,fade=t=out:st={total-0.5}:d=0.5",
