@@ -5,18 +5,19 @@ import random
 
 JSON_PATH = os.path.join(os.path.dirname(__file__), "reciters.json")
 
-# القراء اللي صوتهم خشوع ومؤثر جداً (بتاعين الشورتس)
+# تم تحديث القائمة لتشمل أصوات الخشوع والإبداع فقط
 KHUSHOO_KEYS = [
     "Yasser_Ad-Dussary_128kbps",
     "Idrees_Abkar_128kbps",
     "Fares_Abbad_64kbps",
-    "Abdullah_Matroud_128kbps",
-    "Muhammad_Abdulkareem_128kbps",
-    "Akram_AlAlaqimy_128kbps",
-    "Abdul_Basit_Mujawwad_128kbps",
+    "Muhammad_Al_Luhaidan_128kbps",
+    "Khalid_Al_Jalil_128kbps",
+    "Abdullaah_3awwaad_Al-Juhaynee_128kbps",
+    "Mohammad_al_Tablaway_128kbps",
+    "Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net",
     "Nasser_Alqatami_128kbps",
-    "Salah_Al_Budair_128kbps",
-    "Ahmed_Neana_128kbps"
+    "Muhammad_Abdulkareem_128kbps",
+    "Abdul_Basit_Mujawwad_128kbps"
 ]
 
 def load_reciters():
@@ -41,7 +42,7 @@ def available():
             except Exception:
                 pass
         if not _ok:
-            _ok = ["Alafasy_128kbps"]
+            _ok = ["Yasser_Ad-Dussary_128kbps"]
     return _ok
 
 def pick(n):
@@ -54,7 +55,7 @@ def pick(n):
     if not avail_tarteel:
         return random.Random(n).choice(avail_khushoo)
 
-    # التبديل: فيديو خشوع، وبعده ترتيل
+    # التبديل: فيديو خشوع قوي، وبعده ترتيل هاديء
     if n % 2 == 0:
         return random.Random(n).choice(avail_khushoo)
     else:
