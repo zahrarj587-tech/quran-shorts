@@ -1,6 +1,6 @@
 import os, subprocess, requests
 from bg import make_bg
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 import arabic_reshaper
 from bidi.algorithm import get_display
 
@@ -9,14 +9,14 @@ from reciters import RECITERS
 W, H = 1080, 1920
 MAX_SECONDS = 45
 from PIL import features
-print("raqm:", features.check("raqm"))
 font = ImageFont.truetype("font.ttf", 80, layout_engine=ImageFont.Layout.RAQM)
+font_small = ImageFont.truetype("font.ttf", 40, layout_engine=ImageFont.Layout.RAQM)
 WORK = "work"
 
 def shape(t):
     return t
 
-def wrap(text, maxw=900):
+def wrap(text, maxw=800):
     lines, cur = [], ""
     for w in text.split():
         test = (cur + " " + w).strip()
@@ -27,15 +27,37 @@ def wrap(text, maxw=900):
     lines.append(cur)
     return lines
 
-def render(text, path):
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+def render_page(text, surah_name, path):
+    img = Image.open(f"{WORK}/base.png").convert("RGBA")
     d = ImageDraw.Draw(img)
+    
+    # 1. رسم الإطار الذهبي المزخرف
+    border_color = (180, 140, 50) # لون ذهبي
+    border_width = 6
+    # إطار خارجي
+    d.rectangle([40, 40, W-40, H-40], outline=border_color, width=border_width)
+    # إطار داخلي
+    d.rectangle([60, 60, W-60, H-60], outline=border_color, width=2)
+    
+    # إضافة زخارف في الأركان (دوائر بسيطة)
+    for x, y in [(60,60), (W-60,60), (60,H-60), (W-60,H-60)]:
+        d.ellipse([x-15, y-15, x+15, y+15], outline=border_color, width=3)
+        d.ellipse([x-8, y-8, x+8, y+8], fill=border_color)
+
+    # 2. كتابة اسم السورة في الأعلى
+    clean_surah = surah_name.replace("سُورَةُ", "").replace("سورة", "").strip()
+    surah_text = f"سُورَةُ {clean_surah}"
+    d.text(((W - font_small.getlength(surah_text)) / 2, 100), surah_text, font=font_small, fill=(120, 80, 20))
+    
+    # 3. كتابة الآية في النص
     lines = wrap(text)
     y = H // 2 - len(lines) * 70
     for l in lines:
         s = shape(l)
-        d.text(((W - font.getlength(s)) / 2, y), s, font=font, fill="white")
+        # لون النص بني غامق عشان يبان على الورق
+        d.text(((W - font.getlength(s)) / 2, y), s, font=font, fill=(20, 20, 20))
         y += 140
+        
     img.save(path)
 
 def duration(path):
@@ -53,10 +75,6 @@ def build_title(surah_name, reciter, first, last):
     name = surah_name.replace("سُورَةُ", "").replace("سورة", "").strip()
     rng = f"({first}-{last})" if first != last else f"({first})"
     return f"سورة {name} {rng} | {RECITERS[reciter]}"
-
-def chunk_text(text, max_words=3):
-    words = text.split()
-    return [" ".join(words[i:i+max_words]) for i in range(0, len(words), max_words)]
 
 def make_chunk(surah, start_ayah, reciter=RECITER):
     os.makedirs(WORK, exist_ok=True)
@@ -77,66 +95,23 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         if clips and total + dur > MAX_SECONDS:
             break
         
-        chunks = chunk_text(text)
-        n_chunks = len(chunks)
-        chunk_dur = dur / n_chunks
+        # تركيب صفحة المصحف للآية
+        png = f"{WORK}/{i}_page.png"
+        render_page(text, name, png)
         
-        inputs = []
-        filters = []
-        
-        # الخلفية (تأثير سينمائي)
-        inputs.extend(["-loop", "1", "-framerate", "30", "-i", base_png])
-        # صورة الغبار (شفافة حالياً، هنحولها لجزيئات متحركة)
-        inputs.extend(["-loop", "1", "-framerate", "30", "-i", dust_png])
-        
-        # المقاطع النصية
-        for idx, chunk in enumerate(chunks):
-            png = f"{WORK}/{i}_{idx}.png"
-            render(chunk, png)
-            inputs.extend(["-loop", "1", "-framerate", "30", "-i", png])
-            
-            # تأخير ظهور النص بمقدار 0.3 ثانية عشان يسبق الصوت
-            delay = 0.3 
-            start = (idx * chunk_dur) + delay
-            end = (idx + 1) * chunk_dur
-            if end > dur: end = dur # تأمين عشان ميتعداش مدة الصوت
-            
-            fade_dur = min(0.4, chunk_dur / 2.0)
-            fade_out_st = max(start, end - fade_dur)
-            filters.append(f"[{2+idx}:v]format=rgba,fade=t=in:st={start}:d={fade_dur}:alpha=1,fade=t=out:st={fade_out_st}:d={fade_dur}:alpha=1[t{idx}]")
-            
-        # الصوت
-        inputs.extend(["-i", mp3])
-        audio_idx = 2 + n_chunks
-        
-        off = total
-        # خلفية متحركة بزووم بطيء (Ken Burns) + إضاءة خفيفة
-        filters.append(f"[0:v]scale=1400:2488,crop={W}:{H}:x='(iw-{W})/2+(iw-{W})/2*sin((t+{off})/25)':y='(ih-{H})/2+(ih-{H})/2*cos((t+{off})/30)',eq=brightness=-0.05:saturation=1.2,format=yuv420p[a]")
-        # تحويل صورة الغبار الشفافة إلى جزيئات متحركة (Noise)
-        filters.append(f"[1:v]format=rgba,noise=alls=12:allf=t+u,eq=brightness=0.1[d]")
-        filters.append(f"[a][d]overlay=0:0[c]")
-        
-        # تركيب النص فوق الخلفية بالترتيب
-        prev = "c"
-        for idx in range(n_chunks):
-            delay = 0.3
-            start = (idx * chunk_dur) + delay
-            end = (idx + 1) * chunk_dur
-            if end > dur: end = dur
-            next_label = f"v{idx}"
-            filters.append(f"[{prev}][t{idx}]overlay=0:0:enable='between(t,{start},{end})'[{next_label}]")
-            prev = next_label
-            
-        fc = ";".join(filters)
         out = f"{WORK}/{i}.mp4"
         
-        # إضافة فلتر تطبيع الصوت (loudnorm) عشان الصوت يبقى عالي
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + inputs + [
-            "-filter_complex", fc,
-            "-map", f"[{prev}]", "-map", f"{audio_idx}:a", 
-            "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
-            "-shortest", "-r", "30",
+        # الفيديو: الخلفية (ثابتة) + الصفحة (تظهر مرة واحدة) + الصوت
+        # إضافة Fade in/out بسيط للصفحة عشان تظهر بنعومة
+        fc = f"[1:v]format=rgba,fade=t=in:st=0:d=0.5:alpha=1,fade=t=out:st={dur-0.5}:d=0.5:alpha=1[page];[0:v][page]overlay=0:0[v]"
+        
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
+            "-loop", "1", "-framerate", "30", "-i", base_png,
+            "-loop", "1", "-framerate", "30", "-i", png,
+            "-i", mp3, "-filter_complex", fc,
+            "-map", "[v]", "-map", "2:a", "-shortest", "-r", "30",
             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+            "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
             "-c:a", "aac", out], check=True)
             
         clips.append(out); total += dur; last = i; i += 1
@@ -145,12 +120,8 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
     open(lst, "w").write("".join(f"file '{os.path.basename(c)}'\n" for c in clips))
     final = f"{WORK}/final.mp4"
     
-    # إضافة Fade In في البداية و Fade Out في النهاية
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat",
-        "-i", lst, 
-        "-vf", f"fade=t=in:st=0:d=0.5,fade=t=out:st={total-0.5}:d=0.5",
-        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-c:a", "copy", final], check=True)
+        "-i", lst, "-c", "copy", final], check=True)
         
     title = build_title(name, reciter, start_ayah, last)
     if last >= len(ayahs):
