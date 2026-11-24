@@ -1,28 +1,48 @@
 import os
+import math
+import random
 from PIL import Image, ImageDraw, ImageFilter
 
 def make_bg(seed, out_dir):
     base_path = os.path.join(out_dir, "base.png")
     dust_path = os.path.join(out_dir, "dust.png")
     
-    # 1. عمل خلفية ورقية (لون بيج فاخر)
-    # لون الورق: (244, 235, 215)
-    img = Image.new("RGB", (1080, 1920), (244, 235, 215))
+    # ألوان فخمة (زمردي غامق مع ذهبي)
+    bg_color = (8, 38, 34) # Deep Emerald
+    gold_color = (212, 175, 55) # Golden
+    
+    img = Image.new("RGB", (1080, 1920), bg_color)
     draw = ImageDraw.Draw(img)
     
-    # إضافة إضاءة خفيفة في النص وتغميق الحواف (Vignette)
-    for i in range(200):
-        alpha = int(255 * (1 - i/200))
-        draw.rectangle([i, i, 1080-i, 1920-i], outline=(220, 200, 170, alpha), width=2)
-        
-    # إضافة لمسة "نسيج الورق" (Noise خفيف جداً)
-    noise = Image.effect_noise((1080, 1920), 15).convert("L")
-    noise = noise.filter(ImageFilter.GaussianBlur(1))
-    img = Image.blend(img, Image.merge("RGB", (noise, noise, noise)), 0.05)
+    # رسم زخرفة إسلامية هندسية في الخلفية (نجوم متداخلة)
+    step = 200
+    for x in range(-step, 1080 + step, step):
+        for y in range(-step, 1920 + step, step):
+            # نجمة ثمانية
+            points = []
+            for i in range(16):
+                angle = i * math.pi / 8
+                radius = 80 if i % 2 == 0 else 35
+                px = x + radius * math.cos(angle)
+                py = y + radius * math.sin(angle)
+                points.append((px, py))
+            draw.polygon(points, outline=(20, 60, 50), width=2)
+
+    # تمويه خفيف جداً للخلفية عشان تبان زي "نقشة" مش خطوط حادة
+    img = img.filter(ImageFilter.GaussianBlur(1.5))
+    
+    # إضافة إضاءة دائرية (Vignette) عشان النص يبرز
+    overlay = Image.new("L", (1080, 1920), 0)
+    o_draw = ImageDraw.Draw(overlay)
+    o_draw.ellipse([-200, 200, 1280, 1720], fill=100)
+    overlay = overlay.filter(ImageFilter.GaussianBlur(150))
+    
+    # مزج الإضاءة مع الخلفية
+    dark_bg = Image.new("RGB", (1080, 1920), (3, 15, 12))
+    img = Image.composite(img, dark_bg, overlay)
     
     img.save(base_path)
     
-    # صورة الغبار شفافة عشان الكود ميدربش
     dust = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     dust.save(dust_path)
     

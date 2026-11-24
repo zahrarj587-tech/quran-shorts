@@ -4,19 +4,20 @@ from PIL import Image, ImageDraw, ImageFont
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-RECITER = "Alafasy_128kbps"
+RECITER = "Yasser_Ad-Dussary_128kbps"
 from reciters import RECITERS
 W, H = 1080, 1920
 MAX_SECONDS = 45
-from PIL import features
-font = ImageFont.truetype("font.ttf", 80, layout_engine=ImageFont.Layout.RAQM)
-font_small = ImageFont.truetype("font.ttf", 40, layout_engine=ImageFont.Layout.RAQM)
+font_path = "font.ttf"
+font = ImageFont.truetype(font_path, 95, layout_engine=ImageFont.Layout.RAQM)
+font_small = ImageFont.truetype(font_path, 55, layout_engine=ImageFont.Layout.RAQM)
+font_logo = ImageFont.truetype(font_path, 40, layout_engine=ImageFont.Layout.RAQM)
 WORK = "work"
 
 def shape(t):
     return t
 
-def wrap(text, maxw=800):
+def wrap(text, maxw=850):
     lines, cur = [], ""
     for w in text.split():
         test = (cur + " " + w).strip()
@@ -27,37 +28,57 @@ def wrap(text, maxw=800):
     lines.append(cur)
     return lines
 
-def render_page(text, surah_name, path):
+def render_page(text, surah_name, ayah_num, path):
     img = Image.open(f"{WORK}/base.png").convert("RGBA")
     d = ImageDraw.Draw(img)
     
-    # 1. رسم الإطار الذهبي المزخرف
-    border_color = (180, 140, 50) # لون ذهبي
-    border_width = 6
-    # إطار خارجي
-    d.rectangle([40, 40, W-40, H-40], outline=border_color, width=border_width)
-    # إطار داخلي
-    d.rectangle([60, 60, W-60, H-60], outline=border_color, width=2)
+    # 1. الإطار الذهبي الفخم المزدوج
+    gold = (212, 175, 55)
+    d.rectangle([40, 40, W-40, H-40], outline=gold, width=8)
+    d.rectangle([65, 65, W-65, H-65], outline=gold, width=2)
+    d.rectangle([80, 80, W-80, H-80], outline=gold, width=1)
     
-    # إضافة زخارف في الأركان (دوائر بسيطة)
-    for x, y in [(60,60), (W-60,60), (60,H-60), (W-60,H-60)]:
-        d.ellipse([x-15, y-15, x+15, y+15], outline=border_color, width=3)
-        d.ellipse([x-8, y-8, x+8, y+8], fill=border_color)
+    # زخارف الأركان
+    for x, y in [(65,65), (W-65,65), (65,H-65), (W-65,H-65)]:
+        d.ellipse([x-25, y-25, x+25, y+25], outline=gold, width=4)
+        d.ellipse([x-10, y-10, x+10, y+10], fill=gold)
 
-    # 2. كتابة اسم السورة في الأعلى
+    # 2. اسم السورة داخل شكل بيضاوي مزخرف
     clean_surah = surah_name.replace("سُورَةُ", "").replace("سورة", "").strip()
     surah_text = f"سُورَةُ {clean_surah}"
-    d.text(((W - font_small.getlength(surah_text)) / 2, 100), surah_text, font=font_small, fill=(120, 80, 20))
+    surah_w = font_small.getlength(surah_text)
+    surah_x = (W - surah_w) / 2
+    d.ellipse([surah_x - 80, 100, surah_x + surah_w + 80, 200], outline=gold, width=3)
+    d.text((surah_x, 115), surah_text, font=font_small, fill=gold)
     
-    # 3. كتابة الآية في النص
+    # 3. الآية في المنتصف بالضبط (بدون خلفية)
     lines = wrap(text)
-    y = H // 2 - len(lines) * 70
-    for l in lines:
+    line_height = 140
+    total_text_height = len(lines) * line_height
+    y = (H - total_text_height) / 2
+    
+    for i, l in enumerate(lines):
         s = shape(l)
-        # لون النص بني غامق عشان يبان على الورق
-        d.text(((W - font.getlength(s)) / 2, y), s, font=font, fill=(20, 20, 20))
-        y += 140
+        line_w = font.getlength(s)
+        x = (W - line_w) / 2
         
+        # كتابة السطر
+        d.text((x, y), s, font=font, fill=(255, 255, 255))
+        
+        # إضافة رقم الآية في نهاية آخر سطر (جوه زخرفة)
+        if i == len(lines) - 1:
+            marker = f" ۝{ayah_num} "
+            marker_w = font.getlength(marker)
+            # إزاحة بسيطة للرقم عشان ميتداخلش مع الكلام
+            d.text((x - marker_w - 10, y), marker, font=font, fill=gold)
+            
+        y += line_height
+        
+    # 4. اللوجو / اسم القناة في الأسفل
+    logo_text = "Almushaf | المصحف"
+    logo_w = font_logo.getlength(logo_text)
+    d.text(((W - logo_w) / 2, H - 160), logo_text, font=font_logo, fill=(180, 180, 180))
+    
     img.save(path)
 
 def duration(path):
@@ -95,15 +116,13 @@ def make_chunk(surah, start_ayah, reciter=RECITER):
         if clips and total + dur > MAX_SECONDS:
             break
         
-        # تركيب صفحة المصحف للآية
         png = f"{WORK}/{i}_page.png"
-        render_page(text, name, png)
+        render_page(text, name, i, png)
         
         out = f"{WORK}/{i}.mp4"
         
-        # الفيديو: الخلفية (ثابتة) + الصفحة (تظهر مرة واحدة) + الصوت
-        # إضافة Fade in/out بسيط للصفحة عشان تظهر بنعومة
-        fc = f"[1:v]format=rgba,fade=t=in:st=0:d=0.5:alpha=1,fade=t=out:st={dur-0.5}:d=0.5:alpha=1[page];[0:v][page]overlay=0:0[v]"
+        # ثبات تام للصفحة (No animation inside, pure static text)
+        fc = f"[0:v][1:v]overlay=0:0[v]"
         
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
             "-loop", "1", "-framerate", "30", "-i", base_png,
