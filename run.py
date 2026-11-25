@@ -15,13 +15,11 @@ print("Made:", title)
 if os.environ.get("TEST_MODE") == "true":
     print("🚧 TEST MODE: Uploading video for quick download...")
     try:
-        # رفع الفيديو على موقع Catbox المجاني والسريع
         url = "https://catbox.moe/user/api.php"
         data = {"reqtype": "fileupload"}
         with open(video, "rb") as f:
             files = {"fileToUpload": f}
             response = requests.post(url, data=data, files=files, timeout=60)
-        
         if response.status_code == 200 and response.text.startswith("https://"):
             video_url = response.text.strip()
             print(f"Video URL: {video_url}")
@@ -30,9 +28,31 @@ if os.environ.get("TEST_MODE") == "true":
             print(f"Upload failed. Status: {response.status_code}, Response: {response.text}")
     except Exception as e:
         print(f"Error uploading to catbox: {e}")
-    
-    sys.exit(0) # الخروج من الكود عشان ميرفعش على يوتيوب
+    sys.exit(0)
 # ------------------------------------
+
+# جلب اسم القارئ وعمل هاشتاج منه
+reciter_name = RECITERS.get(rc, rc)
+reciter_hashtag = "#" + reciter_name.replace(" ", "_")
+
+# جلب التفسير (تفسير الميسر)
+tafsir_section = ""
+try:
+    tafsir_url = f"https://api.alquran.cloud/v1/ayah/{p['surah']}:{p['ayah']}/ar.muyassar"
+    tafsir_data = requests.get(tafsir_url, timeout=10).json()["data"]
+    tafsir_text = tafsir_data["text"]
+    tafsir_source = tafsir_data["edition"]["name"]
+    tafsir_section = f"\n\n📖 تفسير الآية ({tafsir_source}):\n{tafsir_text}"
+except Exception as e:
+    print("Tafsir fetch failed:", e)
+
+# تجهيز الوصف المفصل
+description = (
+    f"{title}\n\n"
+    f"🎙️ بصوت الشيخ: {reciter_name}\n"
+    f"{tafsir_section}\n\n"
+    f"#قرآن #shorts #المصحف {reciter_hashtag}"
+)
 
 # 1. يوتيوب
 creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
@@ -42,7 +62,7 @@ creds = Credentials(None, refresh_token=os.environ["YT_REFRESH_TOKEN"],
 yt = build("youtube", "v3", credentials=creds)
 r = yt.videos().insert(part="snippet,status",
     body={"snippet": {"title": title + " #Shorts",
-                      "description": title + "\n\n#قرآن #shorts",
+                      "description": description,
                       "categoryId": "22"},
           "status": {"privacyStatus": "public",
                      "selfDeclaredMadeForKids": False}},
@@ -56,7 +76,7 @@ if pid and tok:
     s = requests.post(g, data={"upload_phase": "start", "access_token": tok}).json()
     data = open(video, "rb").read()
     requests.post(s["upload_url"], data=data, headers={"Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(data))})
-    requests.post(g, data={"upload_phase": "finish", "video_id": s["video_id"], "video_state": "PUBLISHED", "description": title + "\n\n#قرآن", "access_token": tok})
+    requests.post(g, data={"upload_phase": "finish", "video_id": s["video_id"], "video_state": "PUBLISHED", "description": description, "access_token": tok})
     print("Facebook OK")
 
 # 3. تحديث التقدم
@@ -68,7 +88,7 @@ try:
 except Exception:
     st = {"log": []}
 st["log"].append({"t": datetime.datetime.utcnow().isoformat() + "Z",
-    "title": title, "reciter": RECITERS.get(rc, rc), "yt": r["id"]})
+    "title": title, "reciter": reciter_name, "yt": r["id"]})
 st["next"] = {"surah": nxt["surah"], "ayah": nxt["ayah"]}
 st["slots"] = (st.get("slots", []) + [os.environ.get("SLOT", "")])[-60:]
 json.dump(st, open("stats.json", "w"), ensure_ascii=False)
