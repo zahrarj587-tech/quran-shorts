@@ -32,6 +32,8 @@ if slot_type == "post":
     sys.exit(0)
 
 
+
+
 p = json.load(open("progress.json"))
 n = p.get("n", 0)
 rc = pick(n)
@@ -69,7 +71,7 @@ try:
     tafsir_data = requests.get(tafsir_url, timeout=10).json()["data"]
     tafsir_text = tafsir_data["text"]
     tafsir_source = tafsir_data["edition"]["name"]
-    tafsir_section = f"
+    tafsir_section = f"\n📝 {tafsir_source}:\n{tafsir_text}\n"
 
 📝 {tafsir_source}:
 {tafsir_text}
