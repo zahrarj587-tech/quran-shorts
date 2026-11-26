@@ -51,7 +51,7 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          SLOT: ${{ steps.slot.outputs.slot }}
+          SLOT: ${{ steps.slot.outputs.slot }}\n          SLOT_TYPE: ${{ steps.slot.outputs.type }}
           TEST_MODE: ${{ github.event.inputs.test_mode }}
           
       # الخطوة الجديدة: حفظ الفيديو لوضع التجربة

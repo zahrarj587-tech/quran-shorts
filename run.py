@@ -42,7 +42,34 @@ try:
     tafsir_data = requests.get(tafsir_url, timeout=10).json()["data"]
     tafsir_text = tafsir_data["text"]
     tafsir_source = tafsir_data["edition"]["name"]
-    tafsir_section = f"\n\n📖 تفسير الآية ({tafsir_source}):\n{tafsir_text}"
+    tafsir_section = f"\n
+import sys
+from islamic_content import get_facebook_post
+
+slot_type = os.environ.get("SLOT_TYPE", "video")
+if slot_type == "post":
+    print("⏳ جاري تجهيز بوست فيسبوك...")
+    pid = os.environ.get("FB_PAGE_ID")
+    tok = os.environ.get("FB_PAGE_TOKEN")
+    if pid and tok:
+        msg = get_facebook_post()
+        try:
+            r = requests.post(f"https://graph.facebook.com/v23.0/{pid}/feed", data={"message": msg, "access_token": tok}, timeout=30)
+            if r.status_code == 200:
+                print("✅ Facebook Post OK")
+            else:
+                print(f"❌ فشل النشر: {r.text}")
+        except Exception as e:
+            print(f"❌ خطأ: {e}")
+    try:
+        st = json.load(open("stats.json"))
+    except:
+        st = {"log": []}
+    st.setdefault("slots", []).append(os.environ.get("SLOT", ""))
+    st["slots"] = st["slots"][-60:]
+    json.dump(st, open("stats.json", "w"), ensure_ascii=False)
+    sys.exit(0)
+\n\n📖 تفسير الآية ({tafsir_source}):\n{tafsir_text}"
 except Exception as e:
     print("Tafsir fetch failed:", e)
 

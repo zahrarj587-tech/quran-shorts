@@ -1,6 +1,17 @@
-{
-  "Sunrise": 0,
-  "Dhuhr": 0,
-  "Asr": 0,
-  "Isha": 30
-}
+[
+  {"time": "05:00", "type": "post"},
+  {"time": "05:30", "type": "video"},
+  {"time": "08:30", "type": "video"},
+  {"time": "12:00", "type": "post"},
+  {"time": "12:30", "type": "video"},
+  {"time": "13:45", "type": "video"},
+  {"time": "15:30", "type": "post"},
+  {"time": "16:00", "type": "video"},
+  {"time": "17:00", "type": "video"},
+  {"time": "18:30", "type": "post"},
+  {"time": "19:00", "type": "video"},
+  {"time": "19:45", "type": "video"},
+  {"time": "21:00", "type": "post"},
+  {"time": "21:30", "type": "video"},
+  {"time": "01:00", "type": "video"}
+]
