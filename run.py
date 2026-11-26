@@ -72,12 +72,42 @@ print("YouTube OK:", r["id"])
 # 2. فيسبوك (لو المفاتيح موجودة)
 pid, tok = os.environ.get("FB_PAGE_ID"), os.environ.get("FB_PAGE_TOKEN")
 if pid and tok:
-    g = f"https://graph.facebook.com/v21.0/{pid}/video_reels"
-    s = requests.post(g, data={"upload_phase": "start", "access_token": tok}).json()
-    data = open(video, "rb").read()
-    requests.post(s["upload_url"], data=data, headers={"Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(data))})
-    requests.post(g, data={"upload_phase": "finish", "video_id": s["video_id"], "video_state": "PUBLISHED", "description": description, "access_token": tok})
-    print("Facebook OK")
+    try:
+        print("⏳ جاري الرفع على فيسبوك...")
+        g = f"https://graph.facebook.com/v23.0/{pid}/video_reels"
+        
+        s = requests.post(g, data={"upload_phase": "start", "access_token": tok}, timeout=30).json()
+        
+        if "upload_url" not in s:
+            print(f"❌ فيسبوك رفض بدء الرفع: {s}")
+        else:
+            with open(video, "rb") as f_vid:
+                data = f_vid.read()
+            upload_res = requests.post(
+                s["upload_url"], 
+                data=data, 
+                headers={"Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(data))},
+                timeout=300
+            )
+            
+            if upload_res.status_code == 200:
+                finish_res = requests.post(g, data={
+                    "upload_phase": "finish", 
+                    "video_id": s["video_id"], 
+                    "video_state": "PUBLISHED", 
+                    "description": description, 
+                    "access_token": tok
+                }, timeout=30).json()
+                
+                if "id" in finish_res or "success" in finish_res:
+                    print("✅ Facebook OK")
+                else:
+                    print(f"❌ فيسبوك رفض إنهاء الرفع: {finish_res}")
+            else:
+                print(f"❌ فشل رفع الفيديو لفيسبوك: {upload_res.text}")
+                
+    except Exception as e:
+        print(f"❌ حدث خطأ غير متوقع أثناء النشر على فيسبوك: {e}")
 
 # 3. تحديث التقدم
 nxt["n"] = n + 1
