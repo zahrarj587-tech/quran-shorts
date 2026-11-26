@@ -1,5 +1,9 @@
 [
   {
+    "time": "01:00",
+    "type": "video"
+  },
+  {
     "time": "05:00",
     "type": "post"
   },
@@ -25,6 +29,10 @@
   },
   {
     "time": "15:30",
+    "type": "post"
+  },
+  {
+    "time": "15:45",
     "type": "post"
   },
   {
@@ -54,13 +62,5 @@
   {
     "time": "21:30",
     "type": "video"
-  },
-  {
-    "time": "01:00",
-    "type": "video"
-  },
-  {
-    "time": "15:35",
-    "type": "post"
   }
 ]
