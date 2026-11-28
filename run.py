@@ -138,6 +138,14 @@ if pid and tok:
     except Exception as e:
         print(f"❌ حدث خطأ غير متوقع أثناء النشر على فيسبوك: {e}")
 
+# 3. انستجرام
+ig_post_id = None
+try:
+    from ig import publish_reel
+    ig_post_id = publish_reel(video, description)
+except Exception as e:
+    print("Instagram step error:", e)
+
 # 3. تحديث التقدم
 nxt["n"] = n + 1
 json.dump(nxt, open("progress.json", "w"))
@@ -147,7 +155,7 @@ try:
 except Exception:
     st = {"log": []}
 st["log"].append({"t": datetime.datetime.utcnow().isoformat() + "Z",
-    "title": title, "reciter": reciter_name, "yt": r["id"]})
+    "title": title, "reciter": reciter_name, "yt": r["id"], "ig": ig_post_id})
 st["next"] = {"surah": nxt["surah"], "ayah": nxt["ayah"]}
 st["slots"] = (st.get("slots", []) + [os.environ.get("SLOT", "")])[-60:]
 json.dump(st, open("stats.json", "w"), ensure_ascii=False)
