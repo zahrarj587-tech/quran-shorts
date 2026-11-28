@@ -8,6 +8,7 @@ import requests
 IG_TOK = os.environ.get("IG_ACCESS_TOKEN", "").strip()
 IG_ID = os.environ.get("IG_USER_ID", "").strip()
 API = "https://graph.facebook.com/v27.0"
+UPLOAD = "https://rupload.facebook.com/ig-api-upload/v27.0"
 
 
 def _caption(desc):
@@ -27,20 +28,6 @@ def _faststart(path):
         check=False,
     )
     return out if os.path.exists(out) else path
-
-
-def _public_url(path):
-    with open(path, "rb") as f:
-        r = requests.post(
-            "https://catbox.moe/user/api.php",
-            data={"reqtype": "fileupload"},
-            files={"fileToUpload": f},
-            timeout=300,
-        )
-    link = r.text.strip()
-    if r.status_code == 200 and link.startswith("http"):
-        return link
-    raise RuntimeError(f"catbox {r.status_code}: {link[:200]}")
 
 
 def _ig_id():
@@ -73,6 +60,82 @@ def _ig_id():
     return ""
 
 
+def _container_upload(ig_id, path, caption):
+    try:
+        c = requests.post(
+            f"{API}/{ig_id}/media",
+            data={"media_type": "REELS", "upload_type": "resumable",
+                  "caption": caption, "access_token": IG_TOK},
+            timeout=60,
+        ).json()
+        cid = c.get("id")
+        if not cid:
+            print("direct upload not available:", c)
+            return None
+        size = os.path.getsize(path)
+        with open(path, "rb") as f:
+            data = f.read()
+        up = requests.post(
+            f"{UPLOAD}/{cid}",
+            headers={"Authorization": f"OAuth {IG_TOK}", "offset": "0",
+                     "file_size": str(size)},
+            data=data,
+            timeout=600,
+        )
+        if up.status_code != 200:
+            print("direct upload failed:", up.status_code, up.text[:300])
+            return None
+        print("direct upload OK:", size, "bytes")
+        return cid
+    except Exception as e:
+        print("direct upload error:", e)
+        return None
+
+
+def _public_url(path):
+    name = os.path.basename(path)
+    try:
+        with open(path, "rb") as f:
+            r = requests.post("https://tmpfiles.org/api/v1/upload",
+                              files={"file": (name, f, "video/mp4")},
+                              timeout=300)
+        j = r.json()
+        url = ((j.get("data") or {}).get("url") or "").strip()
+        if url:
+            direct = url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+            print("public link (tmpfiles):", direct)
+            return direct
+        print("tmpfiles returned:", r.status_code, r.text[:200])
+    except Exception as e:
+        print("tmpfiles error:", e)
+    try:
+        with open(path, "rb") as f:
+            r = requests.post("https://0x0.st", files={"file": f},
+                              headers={"User-Agent": "quran-shorts-bot/1.0"},
+                              timeout=300)
+        url = r.text.strip()
+        if r.status_code == 200 and url.startswith("http"):
+            print("public link (0x0):", url)
+            return url
+        print("0x0 returned:", r.status_code, url[:200])
+    except Exception as e:
+        print("0x0 error:", e)
+    return ""
+
+
+def _container_url(ig_id, url, caption):
+    c = requests.post(
+        f"{API}/{ig_id}/media",
+        data={"media_type": "REELS", "video_url": url,
+              "caption": caption, "access_token": IG_TOK},
+        timeout=60,
+    ).json()
+    if c.get("id"):
+        return c["id"]
+    print("IG container rejected:", c)
+    return None
+
+
 def publish_reel(video_path, description):
     if not IG_TOK:
         print("Instagram: no token, skipped")
@@ -81,22 +144,17 @@ def publish_reel(video_path, description):
         ig_id = _ig_id()
         if not ig_id:
             return None
-        url = _public_url(_faststart(video_path))
-        print("IG video URL:", url)
-        c = requests.post(
-            f"{API}/{ig_id}/media",
-            data={
-                "media_type": "REELS",
-                "video_url": url,
-                "caption": _caption(description),
-                "access_token": IG_TOK,
-            },
-            timeout=60,
-        ).json()
-        cid = c.get("id")
+        path = _faststart(video_path)
+        cap = _caption(description)
+        cid = _container_upload(ig_id, path, cap)
         if not cid:
-            print("IG container rejected:", c)
-            return None
+            url = _public_url(path)
+            if not url:
+                print("IG: no public link")
+                return None
+            cid = _container_url(ig_id, url, cap)
+            if not cid:
+                return None
         for _ in range(40):
             time.sleep(15)
             s = requests.get(
